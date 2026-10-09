@@ -1,0 +1,3301 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Energy Flow System Design</title>
+<style>/* Layout: AZA navy hero and trust strip, then a sticky contents rail beside a single reading column of sections; navy footer */
+:root{
+  --navy:#0a1a33; --navy2:#0f2747; --navy3:#123a6b; --ink:#0b2545; --slate:#46566b; --muted:#6c7c91;
+  --blue:#1e5bff; --blue2:#3b82f6; --cyan:#22d3ee; --line:#e2e8f1; --bg:#f6f8fc; --card:#ffffff; --soft:#eef4ff;
+  --stated-bg:#e3f7fb; --stated:#0b6b7d; --prop-bg:#fff4dc; --prop:#8a5a00; --must-bg:#e8eeff; --must:#1e4fd6; --should-bg:#eef1f5; --should:#4b5a6e;
+  --y:#0b7a52; --n:#a3b0c2;
+  --d-box:#ffffff; --d-line:#9fb0c6; --d-main:#e6efff; --d-zone:#f2f6fc;
+  --font:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --radius:16px; --maxw:1180px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ink:#e6eefb; --slate:#b2c1d6; --muted:#8a9bb3; --line:#1e3352; --bg:#08142a; --card:#0d1d38; --soft:#132a4f;
+  --stated-bg:#0d3540; --stated:#7fe3f3; --prop-bg:#3a2d10; --prop:#f5cf7a; --must-bg:#16306a; --must:#a9c2ff; --should-bg:#1b2b44; --should:#b8c6da;
+  --blue:#7fb0ff; --y:#5fd3a2; --n:#4d5f7a; --d-box:#0d1d38; --d-line:#5b7091; --d-main:#163565; --d-zone:#0b1830; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --ink:#e6eefb; --slate:#b2c1d6; --muted:#8a9bb3; --line:#1e3352; --bg:#08142a; --card:#0d1d38; --soft:#132a4f;
+  --stated-bg:#0d3540; --stated:#7fe3f3; --prop-bg:#3a2d10; --prop:#f5cf7a; --must-bg:#16306a; --must:#a9c2ff; --should-bg:#1b2b44; --should:#b8c6da;
+  --blue:#7fb0ff; --y:#5fd3a2; --n:#4d5f7a; --d-box:#0d1d38; --d-line:#5b7091; --d-main:#163565; --d-zone:#0b1830; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);line-height:1.6;font-size:15.5px;-webkit-font-smoothing:antialiased;margin:0}
+a{color:inherit}
+h1,h2,h3{line-height:1.15;letter-spacing:-.02em;text-wrap:balance;margin:0}
+.eyebrow{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--blue)}
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;background:rgba(10,26,51,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.mark{width:38px;height:34px;flex:none}
+.brand-text{color:#fff;font-size:19px;font-weight:300;letter-spacing:.5px}
+.brand-text strong{font-weight:800;margin-left:1px}
+.nav-links{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.nav-links a{color:rgba(255,255,255,.82);font-size:14px;font-weight:600;text-decoration:none}
+.nav-links a:hover{color:#fff}
+.nav-cta{background:#1e5bff;color:#fff!important;padding:8px 14px;border-radius:9px}
+/* hero */
+.hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#0a1a33 0%,#0f2747 55%,#123a6b 100%);color:#fff;padding:72px 24px 76px}
+.hero-inner{max-width:var(--maxw);margin:0 auto;position:relative;z-index:2}
+.hero .eyebrow{color:#22d3ee}
+.hero h1{font-size:clamp(38px,7vw,68px);font-weight:800;margin:12px 0 16px}
+.lede{font-size:clamp(16px,2.1vw,20px);color:#c9d6ea;max-width:720px;margin:0}
+.lede strong{color:#fff;font-weight:700}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.meta span{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 14px;font-size:13px;color:#dce6f5}
+.meta b{color:#93a6c2;font-weight:600;margin-right:6px}
+.hero-glow{position:absolute;top:-140px;right:-140px;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(34,211,238,.32),transparent 60%);filter:blur(30px);z-index:1}
+/* trust strip */
+.trust{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;row-gap:6px;background:#0a1a33;color:#b9c7dc;font-size:13px;font-weight:600;padding:13px 20px;font-variant-numeric:tabular-nums}
+.trust span{display:inline-flex;align-items:center}
+.trust span+span::before{content:"";width:5px;height:5px;border-radius:50%;background:#22d3ee;margin:0 16px;flex:none}
+/* layout */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:48px 24px 80px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:48px;align-items:start}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 80px);max-height:calc(100vh - 110px);overflow:auto;border-right:1px solid var(--line);padding-right:16px}
+.toc-h{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.toc a{display:flex;gap:10px;text-decoration:none;color:var(--slate);font-size:13.5px;padding:5px 8px;border-radius:8px;line-height:1.35}
+.toc a:hover{background:var(--soft);color:var(--ink)}
+.tn{font-variant-numeric:tabular-nums;font-weight:700;color:var(--blue);flex:none;width:20px}
+.doc{min-width:0;display:grid;gap:22px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:30px 32px;scroll-margin-top:84px;min-width:0}
+.sec h2{font-size:clamp(24px,3vw,32px);font-weight:800;margin:8px 0 14px}
+.sec h3.sub{font-size:17px;font-weight:800;margin:26px 0 10px;color:var(--ink)}
+.sec p{margin:0 0 12px;max-width:72ch;color:var(--slate)}
+.sec p.lead{font-size:17.5px;color:var(--ink);font-weight:500;max-width:68ch}
+.sec p strong,.sec li strong{color:var(--ink)}
+.sec ul,.sec ol{margin:0 0 14px;padding-left:22px;color:var(--slate);max-width:74ch}
+.sec li{margin:4px 0}
+.sec li::marker{color:var(--blue)}
+.sec em{font-style:normal;font-weight:600;color:var(--prop)}
+/* tables */
+.tw{overflow-x:auto;margin:6px 0 16px;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--soft);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:color-mix(in srgb,var(--soft) 55%,transparent)}
+td:first-child{font-weight:600;white-space:nowrap}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.pill.stated{background:var(--stated-bg);color:var(--stated)}
+.pill.proposed{background:var(--prop-bg);color:var(--prop)}
+.pill.must{background:var(--must-bg);color:var(--must)}
+.pill.should{background:var(--should-bg);color:var(--should)}
+td.cell-y,td.cell-o,td.cell-m,td.cell-f{color:var(--y);font-weight:700;text-align:center}
+td.cell-n{color:var(--n);text-align:center}
+td[class^="cell-"]{white-space:nowrap}
+/* diagrams */
+.dia{margin:10px 0 18px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--soft),var(--card) 40%);padding:14px 10px 6px}
+.dia-scroll{overflow-x:auto}
+.dia svg{display:block;width:100%;min-width:620px;height:auto;font-family:var(--font)}
+.dia figcaption{font-size:12.5px;color:var(--muted);padding:8px 8px 4px;font-weight:600}
+.bx{fill:var(--d-box);stroke:var(--d-line);stroke-width:1.25}
+.bx.main{fill:var(--d-main);stroke:var(--blue);stroke-width:2}
+.lay{fill:var(--d-zone);stroke:var(--line);stroke-width:1}
+.lay.main{fill:var(--d-main);stroke:var(--blue);stroke-width:2;fill-opacity:.55}
+.zone{fill:var(--d-zone);stroke:var(--d-line);stroke-dasharray:5 4}
+.nm{fill:var(--ink);font-weight:700}
+.ln{fill:var(--slate);font-size:11.5px}
+.lnk{fill:var(--ink);font-size:11.5px}
+.hd{fill:var(--blue);font-size:10.5px;font-weight:800;letter-spacing:.14em}
+.cn{fill:none;stroke:var(--d-line);stroke-width:1.25}
+.mk{fill:var(--d-line)}
+/* footer */
+.foot{background:#071225;color:#8ea3c0;padding:30px 24px}
+.foot-inner{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.foot-brand{display:flex;align-items:center;gap:10px}
+.foot-meta{font-size:12.5px;text-align:right}
+a:focus-visible{outline:3px solid #22d3ee;outline-offset:2px;border-radius:4px}
+@media (max-width:980px){.wrap{grid-template-columns:minmax(0,1fr);gap:24px;padding-top:28px}.toc{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding:0 0 16px}.toc ol{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}}
+@media (max-width:700px){.nav-links a:not(.nav-cta){display:none}.sec{padding:22px 18px}.wrap{padding-inline:16px}.hero{padding:52px 16px 56px}.foot-inner{flex-direction:column;text-align:center}.foot-meta{text-align:center}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+<header class="nav"><a class="brand" href="#top"><svg class="mark" viewBox="0 0 64 56" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><polygon points="4,44 16,44 28,12 16,12" fill="url(#lg)"/><polygon points="20,44 32,44 44,12 32,12" fill="url(#lg)" opacity="0.75"/><polygon points="36,44 48,44 60,12 48,12" fill="url(#lg)" opacity="0.5"/></svg><span class="brand-text">AZA<strong>Federal</strong></span></a><nav class="nav-links" aria-label="Sections"><a href="#s5">Context</a><a href="#s9">Requirements</a><a href="#s10">Architecture</a><a href="#s12">Data</a><a href="#s13">Security</a><a class="nav-cta" href="#s18">Open decisions</a></nav></header>
+<section class="hero" id="top"><div class="hero-inner"><div class="eyebrow">System design and functional requirements</div><h1>Energy Flow</h1><p class="lede">A modernized electronic filing portal: <strong>one place for filers to register, file, pay, track and respond</strong>, and one inbox and workflow for staff to check, route, review, decide, docket and publish every submission, with a filing calendar for both.</p><div class="meta"><span><b>Version</b> 0.2 draft</span><span><b>Prepared by</b> AZA Federal</span><span><b>As of</b> October 9, 2026</span><span><b>Status</b> For validation with business owners</span></div></div><div class="hero-glow" aria-hidden="true"></div></section>
+<div class="trust"><span>80 functional requirements</span><span>20 business rules</span><span>12 roles</span><span>8 integrations</span><span>18 open decisions</span></div>
+<div class="wrap"><aside class="toc" aria-label="Contents"><div class="toc-h">Contents</div><ol><li><a href="#s1"><span class="tn">01</span>Document control</a></li><li><a href="#s2"><span class="tn">02</span>Executive summary</a></li><li><a href="#s3"><span class="tn">03</span>Scope, assumptions and constraints</a></li><li><a href="#s4"><span class="tn">04</span>Actors and stakeholders</a></li><li><a href="#s5"><span class="tn">05</span>System context</a></li><li><a href="#s6"><span class="tn">06</span>Business process and submission lifecycle</a></li><li><a href="#s7"><span class="tn">07</span>Business rules</a></li><li><a href="#s8"><span class="tn">08</span>Status model</a></li><li><a href="#s9"><span class="tn">09</span>Functional requirements</a></li><li><a href="#s10"><span class="tn">10</span>Logical architecture</a></li><li><a href="#s11"><span class="tn">11</span>External interfaces and integrations</a></li><li><a href="#s12"><span class="tn">12</span>Data model and data dictionary</a></li><li><a href="#s13"><span class="tn">13</span>Security, roles and access rights</a></li><li><a href="#s14"><span class="tn">14</span>Help assistant</a></li><li><a href="#s15"><span class="tn">15</span>Non-functional requirements</a></li><li><a href="#s16"><span class="tn">16</span>Monitoring, reporting and audit</a></li><li><a href="#s17"><span class="tn">17</span>Traceability to the design decks and prototype</a></li><li><a href="#s18"><span class="tn">18</span>Open issues and decisions to confirm</a></li><li><a href="#s19"><span class="tn">19</span>Glossary</a></li></ol></aside><main class="doc"><section class="sec" id="s1"><div class="eyebrow">Section 01</div><h2>Document control</h2><p class="lead">This document specifies Energy Flow, a modernized electronic filing portal, from its functions down to its target architecture, data and security. It is a working draft for validation with program offices, OSEC, OGC, records, security and accessibility owners.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System</td>
+<td>Energy Flow (working name of the modernized filing portal)</td>
+</tr>
+<tr>
+<td>Document type</td>
+<td>System design and functional requirements</td>
+</tr>
+<tr>
+<td>Version</td>
+<td>0.2 draft, October 9, 2026</td>
+</tr>
+<tr>
+<td>Prepared by</td>
+<td>AZA Federal</td>
+</tr>
+<tr>
+<td>Basis</td>
+<td>The Energy Flow interactive prototype (sample data), the FERConnect Unified Portal Workflow Design deck, the My FERC Filing Calendar proposed design deck, and business rules stated by the client in working sessions</td>
+</tr>
+<tr>
+<td>Changes in 0.2</td>
+<td>Adds the filing calendar for filers and staff, with Month, Quarter and Year views: business rules BR-21 to BR-27, requirements CAL-01 to CAL-16, calendar data (12.7), access rights, traceability to the calendar deck, and open issues 19 to 24</td>
+</tr>
+<tr>
+<td>Audience</td>
+<td>Business owners, program offices, solution architects, developers, testers, security and records officers</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How to read the requirements.</strong> Rules marked <em>Stated</em> come from the client. Rules marked <em>Proposed</em> are design choices made while building the prototype and need confirmation. Section 18 lists every open decision.</p>
+<p><strong>What this document is not.</strong> The prototype runs entirely in a web browser with sample data. The target architecture in sections 10 and 11 is a proposal, not a description of an existing system.</p></section><section class="sec" id="s2"><div class="eyebrow">Section 02</div><h2>Executive summary</h2><p class="lead">Energy Flow gives filers one place to register, file, pay, track and respond, and gives staff one inbox and workflow to check, route, review, decide, docket and publish every submission.</p>
+<ul>
+<li><strong>Two ways in.</strong> People file through guided web screens. Companies send structured data (eTariff, EQR, MBR in XML; Forms 1, 2, 6, 60 and 714 in XBRL) system to system through a web API.</li>
+<li><strong>One lifecycle.</strong> Every submission gets an accession number, follows one status model and keeps a full activity history.</li>
+<li><strong>Three processing paths.</strong> Web filings pass an Office of the Secretary (OSEC) check, then a program office review and a recorded decision. eTariff goes straight to a program office. EQR, MBR and the five XBRL forms are accepted automatically once system checks pass, and the owning office is notified.</li>
+<li><strong>Routing by type.</strong> Electric to OEMR, Hydro to OEP, Pipeline to OER, all other web filings to OGC; any of OEMR, OEP, OER, OE or OGC can take a rehearing.</li>
+<li><strong>Program office review.</strong> Each office acknowledges receipt, recommends accept or reject, gives docketing and eLibrary instructions, and can send the filer a data request.</li>
+<li><strong>Publication.</strong> Accepted content is published to eLibrary, a separate document system. For EQR, MBR and the XBRL forms only a cover letter goes to eLibrary; the data goes to its own database.</li>
+<li><strong>Organizations and roles.</strong> One account can act for several companies as Organization Administrator, Filing Representative or Preparer.</li>
+<li><strong>Filing calendar.</strong> Filers see what they must file and when, why each item applies, how ready they are, and what they already submitted; staff see submissions, response deadlines, stage targets and acceptances by date. Both choose a Month, Quarter or Year view.</li>
+<li><strong>Help assistant.</strong> An in-page assistant answers questions and can open pages, find filings and start tasks, but never submits or decides anything.</li>
+<li><strong>Monitoring.</strong> Staff see an end-to-end pipeline, bottlenecks by office and stage, workload by analyst, and outcome dashboards.</li>
+</ul></section><section class="sec" id="s3"><div class="eyebrow">Section 03</div><h2>Scope, assumptions and constraints</h2><p class="lead">The scope is the customer-facing portal plus the internal intake and review workflow that decides acceptance; regulatory systems of record stay outside it.</p>
+<p><strong>In scope</strong></p>
+<ul>
+<li>Registration, sign-in with a second factor, profile, organizations and roles</li>
+<li>Guided web filing: type selection, payment hand-off, upload, parties, contacts, description, validation, certification, submission</li>
+<li>Filing history, status tracking, responses to requests, supplements, withdrawal, rehearing requests, notices</li>
+<li>Web API intake for eTariff, EQR, MBR and Forms 1, 2, 6, 60 and 714</li>
+<li>Staff inbox, routing, program office workflow, decision, docketing hand-off, eLibrary hand-off, acceptance notifications</li>
+<li>Dashboards, audit history and the help assistant</li>
+<li>The filing calendar: My Filing Calendar for filers and the staff calendar, each with Month, Quarter and Year views</li>
+</ul>
+<p><strong>Out of scope (integrated, not rebuilt)</strong></p>
+<ul>
+<li>eLibrary document management, the docket system of record, Pay.gov, the EQR, MBR and XBRL form databases, identity provider, email delivery, Commission agenda management</li>
+<li>Appeals and judicial review, which happen outside the portal</li>
+<li>Comment and Subscription modules beyond notification hooks (named in the deck, not built in the prototype)</li>
+<li>Reading orders and notices automatically to propose calendar deadlines (a later phase in the calendar deck)</li>
+<li>Two-way synchronization with Outlook or other calendar products; the portal offers export only</li>
+</ul>
+<p><strong>Assumptions</strong></p>
+<ul>
+<li>The prototype's stages, targets, work-in-progress limits, validation rules, docket number format and accession number format are placeholders, not agency rules.</li>
+<li>The calendar's due-date schedules, applicability rules, regulatory basis text, sample dockets and the sample order are placeholders. The calendar informs filers; the governing regulation or order remains the authority on any deadline.</li>
+<li>Office names follow the client's usage. ferc.gov lists OER as the Office of Electric Reliability and the enforcement office as OERA; this needs confirming.</li>
+<li>The portal is the system of engagement; the record of each docket, document and payment stays in its own system.</li>
+</ul>
+<p><strong>Constraints</strong></p>
+<ul>
+<li>Federal website standards (USWDS banner and identifier, required links), Section 508 accessibility, FISMA and NIST SP 800-53 security controls, NARA records schedules.</li>
+<li>No card or bank details are collected by the portal; payment happens on Pay.gov.</li>
+</ul></section><section class="sec" id="s4"><div class="eyebrow">Section 04</div><h2>Actors and stakeholders</h2><p class="lead">Ten human roles and six systems interact with Energy Flow.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Actor</th>
+<th>Type</th>
+<th>What they do in Energy Flow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Visitor</td>
+<td>Human, external</td>
+<td>Reads public pages, registers, signs in</td>
+</tr>
+<tr>
+<td>Organization Administrator</td>
+<td>Human, external</td>
+<td>Files for the organization, sees all of its filings, approves access requests</td>
+</tr>
+<tr>
+<td>Filing Representative</td>
+<td>Human, external</td>
+<td>Prepares, certifies and submits filings for the organization</td>
+</tr>
+<tr>
+<td>Preparer</td>
+<td>Human, external</td>
+<td>Prepares and saves drafts; cannot certify or submit</td>
+</tr>
+<tr>
+<td>Individual filer</td>
+<td>Human, external</td>
+<td>Files on their own behalf, with no organization</td>
+</tr>
+<tr>
+<td>Submitting company system</td>
+<td>System, external</td>
+<td>Sends eTariff, EQR, MBR and XBRL form data through the web API</td>
+</tr>
+<tr>
+<td>OSEC reviewer</td>
+<td>Human, internal</td>
+<td>Checks received web filings; clears, requests information or rejects; routes; releases held filings</td>
+</tr>
+<tr>
+<td>Program office analyst (OEMR, OEP, OER, OE, OGC)</td>
+<td>Human, internal</td>
+<td>Acknowledges receipt, recommends, gives docketing and eLibrary instructions, issues data requests, sees acceptance notifications</td>
+</tr>
+<tr>
+<td>Program office manager</td>
+<td>Human, internal</td>
+<td>Monitors bottlenecks, reassigns and balances work, records decisions under delegated authority</td>
+</tr>
+<tr>
+<td>Commission</td>
+<td>Human, internal</td>
+<td>Votes on matters taken under Commission authority (recorded by staff in the portal)</td>
+</tr>
+<tr>
+<td>System administrator</td>
+<td>Human, internal</td>
+<td>Manages reference data, roles, configuration and audit review</td>
+</tr>
+<tr>
+<td>eLibrary</td>
+<td>System, internal</td>
+<td>Receives published content or cover letters</td>
+</tr>
+<tr>
+<td>Docket system</td>
+<td>System, internal</td>
+<td>Issues and holds docket numbers</td>
+</tr>
+<tr>
+<td>Pay.gov</td>
+<td>System, external</td>
+<td>Takes fee payments and returns a payment result</td>
+</tr>
+<tr>
+<td>Identity provider</td>
+<td>System</td>
+<td>Authenticates users and provides the second factor</td>
+</tr>
+<tr>
+<td>EQR, MBR and form databases</td>
+<td>System, internal</td>
+<td>Store parsed structured data</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Business owners to validate this design:</strong> OSEC, OEMR, OEP, OER, OE, OGC, records management, the CISO's office and the Section 508 coordinator.</p></section><section class="sec" id="s5"><div class="eyebrow">Section 05</div><h2>System context</h2><p class="lead">Energy Flow is the only system filers and staff touch; it hands records to seven systems that stay outside it.</p>
+<figure class="dia"><div class="dia-scroll"><svg viewBox="0 0 760 512" role="img" aria-label="Energy Flow sits between filers, agency staff and the systems of record"><defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs><text class="hd" x="24" y="40">OUTSIDE THE AGENCY</text><text class="hd" x="536" y="40">AGENCY STAFF</text><path class="cn" d="M224 88L290 110" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M224 184L290 152" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M470 100L536 88" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M470 130L536 172" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M470 160L536 248" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M380 176V424" marker-end="url(#ar)"/><path class="cn" d="M110 326V342" marker-end="url(#ar)"/><path class="cn" d="M290 326V342" marker-end="url(#ar)"/><path class="cn" d="M470 326V342" marker-end="url(#ar)"/><path class="cn" d="M650 326V342" marker-end="url(#ar)"/><path class="cn" d="M200 326V424" marker-end="url(#ar)"/><path class="cn" d="M560 326V424" marker-end="url(#ar)"/><path class="cn" d="M110 326H650"/><rect class="bx" x="24" y="52" width="200" height="72" rx="10"/><text class="nm" x="38" y="76" font-size="13">Filers</text><text class="ln" x="38" y="94">Visitors, individuals and</text><text class="ln" x="38" y="110">organization users</text><rect class="bx" x="24" y="148" width="200" height="72" rx="10"/><text class="nm" x="38" y="172" font-size="13">Company systems</text><text class="ln" x="38" y="190">eTariff, EQR, MBR as XML;</text><text class="ln" x="38" y="206">Forms 1, 2, 6, 60, 714 XBRL</text><rect class="bx main" x="290" y="76" width="180" height="100" rx="10"/><text class="nm" x="304" y="100" font-size="16">Energy Flow</text><text class="lnk" x="304" y="118">Portal and web API</text><text class="lnk" x="304" y="134">Staff inbox and workflow</text><text class="lnk" x="304" y="150">Help assistant</text><rect class="bx" x="536" y="52" width="200" height="72" rx="10"/><text class="nm" x="550" y="76" font-size="13">Office of the Secretary</text><text class="ln" x="550" y="94">Checks, clears, routes,</text><text class="ln" x="550" y="110">releases held filings</text><rect class="bx" x="536" y="136" width="200" height="72" rx="10"/><text class="nm" x="550" y="160" font-size="13">Program offices</text><text class="ln" x="550" y="178">OEMR, OEP, OER, OE, OGC</text><text class="ln" x="550" y="194">Review, recommend, decide</text><rect class="bx" x="536" y="220" width="200" height="56" rx="10"/><text class="nm" x="550" y="244" font-size="13">Administrators</text><text class="ln" x="550" y="262">Roles and reference data</text><rect class="zone" x="16" y="292" width="728" height="204" rx="12"/><text class="hd" x="32" y="314">INTEGRATED SYSTEMS, OUTSIDE THE PORTAL</text><rect class="bx" x="32" y="342" width="156" height="56" rx="10"/><text class="nm" x="46" y="366" font-size="13">Identity provider</text><text class="ln" x="46" y="384">Sign-in and MFA</text><rect class="bx" x="212" y="342" width="156" height="56" rx="10"/><text class="nm" x="226" y="366" font-size="13">Pay.gov</text><text class="ln" x="226" y="384">Fee payments</text><rect class="bx" x="392" y="342" width="156" height="56" rx="10"/><text class="nm" x="406" y="366" font-size="13">Docket system</text><text class="ln" x="406" y="384">Docket numbers</text><rect class="bx" x="572" y="342" width="156" height="56" rx="10"/><text class="nm" x="586" y="366" font-size="13">eLibrary</text><text class="ln" x="586" y="384">Published documents</text><rect class="bx" x="122" y="424" width="156" height="56" rx="10"/><text class="nm" x="136" y="448" font-size="13">Data stores</text><text class="ln" x="136" y="466">EQR, MBR, XBRL data</text><rect class="bx" x="302" y="424" width="156" height="56" rx="10"/><text class="nm" x="316" y="448" font-size="13">Email service</text><text class="ln" x="316" y="466">Notices</text><rect class="bx" x="482" y="424" width="156" height="56" rx="10"/><text class="nm" x="496" y="448" font-size="13">AI service</text><text class="ln" x="496" y="466">Help answers</text></svg></div><figcaption>Energy Flow sits between filers, agency staff and the systems of record</figcaption></figure>
+<p>Filers and company systems exchange submissions, receipts and status with Energy Flow; staff work inside it; arrows into the dashed area show the portal sending data to the systems of record.</p></section><section class="sec" id="s6"><div class="eyebrow">Section 06</div><h2>Business process and submission lifecycle</h2><p class="lead">Every submission is received and numbered the same way, then takes one of three paths: OSEC check and program office review for web filings, straight to a program office for eTariff, or automatic acceptance for EQR, MBR and the XBRL forms.</p>
+<figure class="dia"><div class="dia-scroll"><svg viewBox="0 0 760 684" role="img" aria-label="Every submission takes one of three paths from receipt"><defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs><path class="cn" d="M140 76V100" marker-end="url(#ar)"/><path class="cn" d="M390 76V100" marker-end="url(#ar)"/><path class="cn" d="M620 76V100" marker-end="url(#ar)"/><path class="cn" d="M140 140V164" marker-end="url(#ar)"/><path class="cn" d="M390 140V268" marker-end="url(#ar)"/><path class="cn" d="M620 140V164" marker-end="url(#ar)"/><path class="cn" d="M140 236V268" marker-end="url(#ar)"/><path class="cn" d="M620 252V276" marker-end="url(#ar)"/><path class="cn" d="M620 332V356" marker-end="url(#ar)"/><path class="cn" d="M620 412V436" marker-end="url(#ar)"/><path class="cn" d="M620 508V612" marker-end="url(#ar)"/><path class="cn" d="M265 356V380" marker-end="url(#ar)"/><path class="cn" d="M355 408H376" marker-end="url(#ar)"/><path class="cn" d="M265 436V460" marker-end="url(#ar)"/><path class="cn" d="M265 508V532" marker-end="url(#ar)"/><path class="cn" d="M265 588V612" marker-end="url(#ar)"/><rect class="bx" x="50" y="20" width="180" height="56" rx="10"/><text class="nm" x="64" y="44" font-size="13">Web filing</text><text class="ln" x="64" y="62">Guided screens, all types</text><rect class="bx" x="300" y="20" width="180" height="56" rx="10"/><text class="nm" x="314" y="44" font-size="13">eTariff by API</text><text class="ln" x="314" y="62">XML, routed by subject</text><rect class="bx" x="530" y="20" width="180" height="56" rx="10"/><text class="nm" x="544" y="44" font-size="13">EQR, MBR, XBRL forms</text><text class="ln" x="544" y="62">XML or XBRL by API</text><rect class="bx" x="50" y="100" width="660" height="40" rx="10"/><text class="nm" x="380.0" y="125.0" text-anchor="middle" font-size="13">Received: accession number issued, receipt sent</text><rect class="bx" x="50" y="164" width="180" height="72" rx="10"/><text class="nm" x="64" y="188" font-size="13">OSEC check</text><text class="ln" x="64" y="206">Clear, request information</text><text class="ln" x="64" y="222">or reject with a reason</text><rect class="bx" x="530" y="164" width="180" height="88" rx="10"/><text class="nm" x="544" y="188" font-size="13">System checks</text><text class="ln" x="544" y="206">Format and business rules;</text><text class="ln" x="544" y="222">XBRL validation, accuracy</text><text class="ln" x="544" y="238">Fail: rejected automatically</text><rect class="bx" x="50" y="268" width="430" height="88" rx="10"/><text class="nm" x="64" y="292" font-size="13">Program office review</text><text class="ln" x="64" y="310">Routed by type, acknowledged, analysed, quality reviewed</text><text class="ln" x="64" y="326">Recommendation plus docketing and eLibrary instructions</text><text class="ln" x="64" y="342">A data request waits here until the filer answers</text><rect class="bx main" x="175" y="380" width="180" height="56" rx="10"/><text class="nm" x="189" y="404" font-size="13">Decision</text><text class="lnk" x="189" y="422">Delegated or Commission</text><rect class="bx" x="376" y="380" width="104" height="56" rx="10"/><text class="nm" x="390" y="404" font-size="13">Rejected</text><text class="ln" x="390" y="422">Reason given</text><text class="ln" x="273" y="453">accept</text><rect class="bx" x="135" y="460" width="260" height="48" rx="10"/><text class="nm" x="149" y="484" font-size="13">Docketed</text><text class="ln" x="149" y="502">As instructed; automatic for eTariff</text><rect class="bx" x="135" y="532" width="260" height="56" rx="10"/><text class="nm" x="149" y="556" font-size="13">Content published to eLibrary</text><text class="ln" x="149" y="574">Unless the office asked to hold it</text><rect class="bx" x="530" y="276" width="180" height="56" rx="10"/><text class="nm" x="544" y="300" font-size="13">Accepted automatically</text><text class="ln" x="544" y="318">No docket number</text><rect class="bx" x="530" y="356" width="180" height="56" rx="10"/><text class="nm" x="544" y="380" font-size="13">Parsed into a database</text><text class="ln" x="544" y="398">EQR, MBR or form database</text><rect class="bx" x="530" y="436" width="180" height="72" rx="10"/><text class="nm" x="544" y="460" font-size="13">Cover letter to eLibrary</text><text class="ln" x="544" y="478">OE notified: EQR, forms</text><text class="ln" x="544" y="494">OEMR notified: MBR</text><rect class="bx" x="50" y="612" width="660" height="48" rx="10"/><text class="nm" x="380.0" y="641.0" text-anchor="middle" font-size="13">Completed: filer, parties and subscribers notified</text></svg></div><figcaption>Every submission takes one of three paths from receipt</figcaption></figure>
+<p>Only the decision step records acceptance for web filings and eTariff; for EQR, MBR and the forms, passing the system checks is the acceptance.</p>
+<p><strong>Exception paths</strong></p>
+<ul>
+<li><strong>Information request (OSEC):</strong> the filer corrects and resubmits; the filing returns to Received.</li>
+<li><strong>Data request (program office):</strong> the filing waits in its stage; the filer's response returns it to the same office and marks it Amended.</li>
+<li><strong>Reroute:</strong> an office can send a filing to another office's Intake; review steps start over there.</li>
+<li><strong>Hold:</strong> an accepted filing whose instruction is to hold waits in Held from eLibrary until OSEC releases it.</li>
+<li><strong>Withdrawal:</strong> the filer can withdraw until the filing is docketed.</li>
+<li><strong>Follow-on filings:</strong> supplements and rehearing requests start new filings linked to the original.</li>
+</ul></section><section class="sec" id="s7"><div class="eyebrow">Section 07</div><h2>Business rules</h2><p class="lead">The channel and the filing type decide the path, the office, whether a docket number is issued, and what goes to eLibrary.</p>
+<h3 class="sub">7.1 Processing paths by channel and type</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Submission</th>
+<th>Channel</th>
+<th>Format</th>
+<th>First stop</th>
+<th>Accepted by</th>
+<th>Docket number</th>
+<th>Stored in eLibrary</th>
+<th>Notified office</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web filing (all types)</td>
+<td>Web screens</td>
+<td>Documents</td>
+<td>OSEC check</td>
+<td>Decision after program office review</td>
+<td>Yes, as the office instructs</td>
+<td>Full content</td>
+<td>Routed office</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>eTariff</td>
+<td>Web API</td>
+<td>XML</td>
+<td>Program office intake</td>
+<td>Program office decision</td>
+<td>Yes, automatic on acceptance</td>
+<td>Full content</td>
+<td>Routed office</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>EQR</td>
+<td>Web API</td>
+<td>XML</td>
+<td>System checks</td>
+<td>Automatic</td>
+<td>No</td>
+<td>Cover letter only</td>
+<td>OE</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>MBR</td>
+<td>Web API</td>
+<td>XML</td>
+<td>System checks</td>
+<td>Automatic</td>
+<td>No</td>
+<td>Cover letter only</td>
+<td>OEMR</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>Form 1, 2, 6, 60, 714</td>
+<td>Web API</td>
+<td>XBRL</td>
+<td>System validation and accuracy check</td>
+<td>Automatic</td>
+<td>No</td>
+<td>Cover letter only</td>
+<td>OE</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">7.2 Rules</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Rule</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BR-01</td>
+<td>Electric filings route to OEMR, Hydro to OEP, Pipeline (gas and oil) to OER; all others, including litigation and settlements, route to OGC.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-02</td>
+<td>A rehearing request can be handled by OEMR, OEP, OER, OE or OGC. By default it follows its subject (Electric to OEMR, Hydro to OEP, Pipeline to OER, other to OGC).</td>
+<td><span class="pill stated">Stated; default rule Proposed</span></td>
+</tr>
+<tr>
+<td>BR-03</td>
+<td>In the program office workflow, OE takes only rehearings; other web filings cannot be routed to OE. OE still receives EQR and XBRL acceptance notifications.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-04</td>
+<td>Each program office acknowledges receipt, recommends accept or reject, and gives docketing and eLibrary instructions.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-05</td>
+<td>A filing cannot leave Intake until receipt is acknowledged, and cannot reach Ready for decision until a recommendation and instructions are recorded.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-06</td>
+<td>A rejection recommendation and a rejection decision must give a reason.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-07</td>
+<td>The recommendation is advice; the decision is recorded separately under delegated authority or Commission vote.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-08</td>
+<td>Rerouting to another office clears acknowledgment, recommendation and instructions; the new office starts at Intake.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-09</td>
+<td>An open data request stops the filing advancing until the filer responds or staff withdraw the request.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-10</td>
+<td>Docketing happens automatically once a filing like eTariff is accepted, or after review by OSEC and the program offices.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-11</td>
+<td>eTariff is the only API submission that gets a docket number. EQR, MBR and the XBRL forms get none.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-12</td>
+<td>EQR and MBR pass data format and business rule checks, then are accepted automatically and shown to staff and the program office as an acceptance notification.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-13</td>
+<td>Forms 1, 2, 6, 60 and 714 are validated and confirmed for accuracy by the system before acceptance, then OE is notified.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-14</td>
+<td>EQR, MBR and XBRL form data are parsed into their own SQL databases; only a cover letter with the submission details goes to eLibrary.</td>
+<td><span class="pill stated">Stated</span></td>
+</tr>
+<tr>
+<td>BR-15</td>
+<td>All accepted filings publish their content to eLibrary, outside the portal. A program office may ask to hold a filing; staff release it later.</td>
+<td><span class="pill stated">Stated; hold option Proposed</span></td>
+</tr>
+<tr>
+<td>BR-16</td>
+<td>An API submission that fails its checks is rejected automatically and the submitter is notified.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-17</td>
+<td>A Preparer cannot certify or submit.</td>
+<td><span class="pill proposed">Proposed, from the deck</span></td>
+</tr>
+<tr>
+<td>BR-18</td>
+<td>A submission cannot be sent until validation has run on the current package with no errors and the filer has certified it.</td>
+<td><span class="pill proposed">Proposed, from the deck</span></td>
+</tr>
+<tr>
+<td>BR-19</td>
+<td>A fee-bearing filing cannot be submitted until Pay.gov reports payment.</td>
+<td><span class="pill proposed">Proposed, from the deck</span></td>
+</tr>
+<tr>
+<td>BR-20</td>
+<td>A filer may withdraw a filing until it is accepted and docketed.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-21</td>
+<td>Calendar items come from six sources: recurring forms, docket deadlines from subscribed dockets, tariff processes directed by an order, registration upkeep, agency information and data requests, and the organization's own milestones; past submissions and acceptances also show as filing activity.</td>
+<td><span class="pill proposed">Proposed, from the calendar deck</span></td>
+</tr>
+<tr>
+<td>BR-22</td>
+<td>Each recurring item is labelled Required, Potentially applicable or Optional from the organization's type, status flags and filing history; docket items are Docket-related. The calendar recommends and the organization confirms: a confirmed item becomes Required, a dismissed one is hidden and can be restored.</td>
+<td><span class="pill proposed">Proposed, from the calendar deck</span></td>
+</tr>
+<tr>
+<td>BR-23</td>
+<td>An item's readiness is five checks: registration current, authority to submit confirmed, required data ready, preparer assigned, reviewer assigned. The authorized submitter must be an Organization Administrator or Filing Representative (BR-17).</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-24</td>
+<td>An item is At risk when it is due within 14 days with fewer than 4 of 5 checks done, and Missed when a Required or Docket-related item passes its date with no submission. Required deadlines within 3 days of each other are flagged Close together.</td>
+<td><span class="pill proposed">Proposed; thresholds are placeholders</span></td>
+</tr>
+<tr>
+<td>BR-25</td>
+<td>A submission satisfies an obligation when it is started from the calendar item, or when an API submission of the same type and organization arrives within 75 days before the due date.</td>
+<td><span class="pill proposed">Proposed</span></td>
+</tr>
+<tr>
+<td>BR-26</td>
+<td>Quarter views use calendar quarters (January to March, April to June, July to September, October to December).</td>
+<td><span class="pill proposed">Proposed; see open issue 21</span></td>
+</tr>
+<tr>
+<td>BR-27</td>
+<td>Calendar due dates are informational; a missed calendar reminder does not change a filing deadline set by regulation or order.</td>
+<td><span class="pill proposed">Proposed; confirm with OGC</span></td>
+</tr>
+</tbody>
+</table></div></section><section class="sec" id="s8"><div class="eyebrow">Section 08</div><h2>Status model</h2><p class="lead">Filers see seven shared statuses from the deck; staff see ten detailed ones underneath, plus the program office stage.</p>
+<h3 class="sub">8.1 Submission statuses</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Staff status</th>
+<th>What it means</th>
+<th>Filer sees</th>
+<th>Next possible statuses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Draft</td>
+<td>Being prepared; not sent</td>
+<td>Draft</td>
+<td>Received by the agency</td>
+</tr>
+<tr>
+<td>Received by the agency</td>
+<td>Accession number issued; waiting for OSEC</td>
+<td>Received by the agency</td>
+<td>OSEC review, Withdrawn</td>
+</tr>
+<tr>
+<td>OSEC review</td>
+<td>Assigned to an OSEC reviewer</td>
+<td>Under review</td>
+<td>Additional information requested, Cleared for program office, Rejected, Withdrawn</td>
+</tr>
+<tr>
+<td>Additional information requested</td>
+<td>OSEC asked the filer for corrections</td>
+<td>Additional information requested</td>
+<td>Received by the agency (after resubmission), Withdrawn</td>
+</tr>
+<tr>
+<td>Cleared for program office</td>
+<td>OSEC check done; waiting to be routed</td>
+<td>Under review</td>
+<td>Program office review, Withdrawn</td>
+</tr>
+<tr>
+<td>Program office review</td>
+<td>With an office, at one of five stages</td>
+<td>Under review, or Additional information requested while a data request is open</td>
+<td>Accepted and docketed, Completed, Rejected, Withdrawn</td>
+</tr>
+<tr>
+<td>Docketed, held from eLibrary</td>
+<td>Accepted and docketed; publication held by instruction</td>
+<td>Under review</td>
+<td>Completed</td>
+</tr>
+<tr>
+<td>Completed</td>
+<td>Accepted; content or cover letter in eLibrary</td>
+<td>Completed</td>
+<td>(final; supplements and rehearings start new filings)</td>
+</tr>
+<tr>
+<td>Rejected</td>
+<td>Not accepted, with a reason</td>
+<td>Rejected</td>
+<td>(final; File again starts a new filing)</td>
+</tr>
+<tr>
+<td>Withdrawn</td>
+<td>Withdrawn by the filer</td>
+<td>Withdrawn</td>
+<td>(final)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two more labels mark a filing without changing its status: <strong>Amended</strong> (a supplement was filed against it) and <strong>Sent by API</strong>.</p>
+<h3 class="sub">8.2 Draft states</h3>
+<p>While a draft is open the wizard shows one of: Draft, Payment pending, Payment failed, Ready to validate, Corrections required, Ready to submit.</p>
+<h3 class="sub">8.3 Program office stages</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Entry condition</th>
+<th>Target days</th>
+<th>Work-in-progress limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intake</td>
+<td>Routed or rerouted to the office</td>
+<td>1</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Assigned</td>
+<td>Receipt acknowledged; analyst assigned</td>
+<td>2</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Analysis</td>
+<td>Analyst working</td>
+<td>10</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Quality review</td>
+<td>Management quality review</td>
+<td>5</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Ready for decision</td>
+<td>Recommendation and instructions recorded</td>
+<td>3</td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p>Targets and limits are prototype placeholders (Proposed). A stage cell is flagged as a bottleneck when two or more filings are past target or the count exceeds the limit.</p>
+<h3 class="sub">8.4 Filer tracker</h3>
+<p>The filer's tracker shows six steps for web filings: Submitted, Received by the agency, OSEC review, Program office review, Decision and docketing, Published to eLibrary. Automatically accepted API submissions show their own five: Transmitted by API, checks passed, Accepted automatically, Stored in its database, Cover letter in eLibrary.</p></section><section class="sec" id="s9"><div class="eyebrow">Section 09</div><h2>Functional requirements</h2><p class="lead">The system shall meet the 96 requirements below, grouped into twelve modules; each is shown working in the prototype unless marked <em>Not in prototype</em>. Priority: M = must, S = should.</p>
+<h3 class="sub">9.1 Access and registration (ACC)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ACC-01</td>
+<td>Let a visitor register in three steps: account, address, employer and alternate contact (or private citizen).</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-02</td>
+<td>Refuse a registration whose email already has an account, and point the person to sign in.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-03</td>
+<td>Sign in with email and password, then a one-time code from an authenticator app, security key, text message or backup code.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-04</td>
+<td>After sign-in, recognize the existing profile and ask the person to confirm which organization they act for today, or all authorized organizations.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-05</td>
+<td>Let a person request access to an organization with a role; route the request to that organization's administrator, or to staff validation when there is none.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-06</td>
+<td>Let an Organization Administrator approve access requests and see the people linked to the organization.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-07</td>
+<td>Let a person switch organization context from the header; filter workspace and filings to that organization.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-08</td>
+<td>Show the government banner, agency identifier and required links on every page.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>ACC-09</td>
+<td>Staff validation of an organization claim with no administrator. <em>Not in prototype.</em></td>
+<td><span class="pill should">S</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.2 Workspace (WSP)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WSP-01</td>
+<td>Show tiles for tasks requiring attention, drafts, submitted or under review, and deadlines within 14 days.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WSP-02</td>
+<td>List filings that need action with the request, the due date and a button to respond.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WSP-03</td>
+<td>Offer quick actions: start a filing, respond to a request, amend or supplement, request rehearing, manage organization access.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WSP-04</td>
+<td>Show recent activity across organizations with status and the next action.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WSP-05</td>
+<td>Show filings by status and per month.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>WSP-06</td>
+<td>Show the draft in progress with its state and a resume link.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.3 Guided filing (FIL)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FIL-01</td>
+<td>Start every filing with two questions: what are you trying to do (new, respond, supplement, rehearing) and who are you representing; show the resulting step plan.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-02</td>
+<td>Choose the filing by direction (category), kind and type in three linked lists; show the fee.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-03</td>
+<td>Skip steps that do not apply: payment when there is no fee; type and payment when responding, supplementing or requesting rehearing.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-04</td>
+<td>Hand off to Pay.gov for a fee and record the result, including a failed payment and retry.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-05</td>
+<td>Upload files with a description and a security level (Public, Privileged, CEII); enforce name and size limits.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-06</td>
+<td>Search and add filing parties, or file as an individual; add a new organization.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-07</td>
+<td>Require a registered signer for every filing party.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-08</td>
+<td>Prefill a description from the type and party; allow a docket number or request a new docket.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-09</td>
+<td>Run validation on demand: required steps, allowed formats, duplicate names, descriptions, non-public-only packages, docket format, possible duplicate filing, malware scan, fee status. Show errors with a Fix link.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-10</td>
+<td>Invalidate a validation result when the package changes.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-11</td>
+<td>State whom the person is submitting on behalf of and require certification before submission.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-12</td>
+<td>Block certification and submission for a Preparer.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-13</td>
+<td>Save, resume and discard a draft.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-14</td>
+<td>On submission, issue an accession number and a receipt notice.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>FIL-15</td>
+<td>File again from an earlier filing, copying type, parties, contacts and description but not files or payment.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.4 Tracking and follow-up (TRK)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TRK-01</td>
+<td>List the filer's filings with search, tabs (all, open, needs correction, closed) and key facts: date, docket, accession, type, organization.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-02</td>
+<td>Show a status tracker, who has the filing now, the request or reason, the decision, and the full activity history.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-03</td>
+<td>Let the filer correct and resubmit after an OSEC information request.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-04</td>
+<td>Let the filer respond to a program office data request; the response returns the filing to the same office and stage and marks it Amended.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-05</td>
+<td>Let the filer amend or supplement an open filing as a new linked filing.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-06</td>
+<td>Let the filer withdraw a filing before it is docketed, with undo.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-07</td>
+<td>Let the filer request rehearing of a completed filing as a new linked filing.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-08</td>
+<td>For automatically accepted API submissions, show the stored cover letter's contents and where the data went.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>TRK-09</td>
+<td>Show notices for every status change.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.5 Web API intake (API)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API-01</td>
+<td>Accept eTariff, EQR and MBR as XML and Forms 1, 2, 6, 60, 714 as XBRL from authenticated company systems.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>API-02</td>
+<td>Issue an accession number on receipt.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>API-03</td>
+<td>Run data format and business rule checks; for XBRL forms also run validation and an accuracy check.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>API-04</td>
+<td>Reject a failing submission automatically with the reason and notify the submitter.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>API-05</td>
+<td>Route a passing eTariff to the program office by subject, with automatic docketing on acceptance.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>API-06</td>
+<td>Accept a passing EQR, MBR or XBRL form automatically, parse it into its database, generate a cover letter for eLibrary, and notify the offices: OSEC and OE for EQR, OSEC and OEMR for MBR, OE for the XBRL forms.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>API-07</td>
+<td>Real endpoints, authentication, schemas and acknowledgements. <em>Not in prototype.</em></td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.6 OSEC inbox (INB)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INB-01</td>
+<td>Show queues: inbox, assigned to me, unassigned, waiting on filer, overdue, cleared to route, held from eLibrary, published, rejected or withdrawn, acceptance notifications.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>INB-02</td>
+<td>Search a queue; select one or many submissions.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>INB-03</td>
+<td>Clear, request information (with reasons, message and due date) or reject (with a reason), singly or in bulk, with undo.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>INB-04</td>
+<td>Assign to me; move Received to OSEC review on assignment.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>INB-05</td>
+<td>Route a cleared filing to its office by type; choose the office for a rehearing.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>INB-06</td>
+<td>Release a held filing to eLibrary; record a correction to a published record with a reason.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>INB-07</td>
+<td>Mark an acceptance notification as seen.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.7 Program office workflow (WFL)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WFL-01</td>
+<td>Show an end-to-end pipeline count from Received to Published.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-02</td>
+<td>Show lanes per office and stage with counts, average time in stage, target and limit; highlight bottlenecks and rank the top three.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-03</td>
+<td>Filter by type, office, late or blocked, and API only.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-04</td>
+<td>Open a card to assign an analyst, reroute, flag as blocked with a reason, and move back or forward.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-05</td>
+<td>Record receipt acknowledgment, a recommendation with rationale, and docketing and eLibrary instructions; enforce BR-05.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-06</td>
+<td>Issue and withdraw a data request; enforce BR-09.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-07</td>
+<td>At Ready for decision, record the authority path and the decision; on acceptance docket as instructed and publish or hold.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-08</td>
+<td>Drag a card between stages; while dragging, show an office bar to reroute to another office's Intake; enforce BR-03 and BR-05.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-09</td>
+<td>Balance an office's workload across its analysts, oldest first.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>WFL-10</td>
+<td>Show acceptance notifications by office with mark as seen.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>WFL-11</td>
+<td>Undo the last workflow action.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>WFL-12</td>
+<td>Simulate an incoming API submission (prototype aid only).</td>
+<td><span class="pill should">S</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.8 Dashboards (DSH)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DSH-01</td>
+<td>Office dashboard: open in the inbox, unassigned, overdue, held from eLibrary.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>DSH-02</td>
+<td>Charts of open submissions by age, outcomes, docketing path, decision authority, workload by reviewer, and reasons for requests and rejections.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>DSH-03</td>
+<td>Workflow review-step counts and rehearings by office.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.9 Notices (NTF)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NTF-01</td>
+<td>Notify the filer at receipt, clearance, routing, acknowledgment, data request, decision, publication, withdrawal and API acceptance or rejection.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>NTF-02</td>
+<td>Notify parties' contacts and Subscription users on publication.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>NTF-03</td>
+<td>Notify administrators of access requests and requesters of approval.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>NTF-04</td>
+<td>Send notices by email as well as in the portal. <em>Not in prototype.</em></td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.10 Help assistant (HLP)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HLP-01</td>
+<td>Offer a help panel on every page with suggestions suited to the person's role.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>HLP-02</td>
+<td>Answer questions about the site and its rules.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>HLP-03</td>
+<td>Open pages, search and open filings, and open the start page for a filing task, limited to what the person may see.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>HLP-04</td>
+<td>Never submit, pay, certify, accept, reject, withdraw, publish or change a record.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>HLP-05</td>
+<td>Fall back to built-in guided answers when the AI service is unavailable or declined.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.11 Filing calendar (CAL)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CAL-01</td>
+<td>Offer a View by choice of Month, Quarter or Year, with previous and next buttons that step one month, quarter or year, and a Today button; also offer an Agenda list (next 180 days, optionally the last 60) and an Organization view.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-02</td>
+<td>Quarter view: show the quarter's three months side by side with a marker per item on each day, list the quarter's items by month, and open a day or an item beside them.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-03</td>
+<td>Year view: show all twelve months with item counts, quarter buttons with counts, and open any quarter, month or day from it.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-04</td>
+<td>Build the filer's items from the six sources in BR-21, for every organization the person acts for, filtered by the organization chosen in the header.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-05</td>
+<td>Label every item by applicability (BR-22), let the person show or hide each label and filter by source.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-06</td>
+<td>Explain why each item appears (the organization data, history, docket or order that produced it) and show its regulatory basis.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-07</td>
+<td>Let the organization confirm or dismiss a potentially applicable item, and restore a dismissed one.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-08</td>
+<td>Show an item's due date and days remaining, readiness checklist (BR-23), assignment of preparer, reviewer and authorized submitter, and its submission trail (draft, submitted, accepted, corrected).</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-09</td>
+<td>Offer the item's next action: Start filing with type and docket filled in, Continue draft, View submission, or, for API-only types, send from the company system; plus Assign and Set reminder (1 to 14 days before).</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-10</td>
+<td>Add recommended preparation dates (draft ready, legal review, approval, planned submission) as internal milestones on the calendar.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>CAL-11</td>
+<td>Alert the person to items At risk and to deadlines Close together (BR-24).</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>CAL-12</td>
+<td>Organization view: per organization, counts of required, docket-related, to-confirm, at-risk, missed and submitted items; the list of items to confirm; docket subscriptions.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-13</td>
+<td>Export the next 12 months for calendar apps as a CSV file and as iCalendar text to copy.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>CAL-14</td>
+<td>Staff calendar: Month, Quarter and Year views of submissions received, filer responses due, program office stage targets and acceptances; filter by office and by type; counts for the period shown; in Quarter view a table by month; in Year view daily shading by volume with missed stage targets marked; a day panel and the next 14 days with links to open each submission.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>CAL-15</td>
+<td>Deliver reminders by email and offer a subscribable calendar feed. <em>Not in prototype.</em></td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>CAL-16</td>
+<td>Read orders and notices to propose deadlines for staff or filer confirmation. <em>Not in prototype; later phase.</em></td>
+<td><span class="pill should">S</span></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">9.12 Audit and undo (AUD)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AUD-01</td>
+<td>Record every action on a submission as an event with time, actor and description.</td>
+<td><span class="pill must">M</span></td>
+</tr>
+<tr>
+<td>AUD-02</td>
+<td>Offer undo for staff decisions, routing, workflow moves and withdrawal immediately after the action.</td>
+<td><span class="pill should">S</span></td>
+</tr>
+<tr>
+<td>AUD-03</td>
+<td>Keep a tamper-evident audit log outside the portal's operational store. <em>Not in prototype.</em></td>
+<td><span class="pill must">M</span></td>
+</tr>
+</tbody>
+</table></div></section><section class="sec" id="s10"><div class="eyebrow">Section 10</div><h2>Logical architecture</h2><p class="lead">The proposed target is a set of application services over one operational database, behind an identity provider and API gateway, handing records to the systems of record through an outbound queue. The prototype implements the service logic in the browser only.</p>
+<figure class="dia"><div class="dia-scroll"><svg viewBox="0 0 760 844" role="img" aria-label="Energy Flow is a set of services over one database, handing records on"><defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker></defs><path class="cn" d="M380 108V128" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M380 236V256" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M380 508V528" marker-start="url(#ar)" marker-end="url(#ar)"/><path class="cn" d="M380 636V656" marker-start="url(#ar)" marker-end="url(#ar)"/><rect class="lay" x="24" y="4" width="712" height="104" rx="14"/><text class="hd" x="40" y="26">CHANNELS</text><rect class="bx" x="40" y="36" width="332" height="56" rx="10"/><text class="nm" x="54" y="60" font-size="13">Web browser</text><text class="ln" x="54" y="78">Filer and staff pages, help panel</text><rect class="bx" x="388" y="36" width="332" height="56" rx="10"/><text class="nm" x="402" y="60" font-size="13">Company systems</text><text class="ln" x="402" y="78">XML and XBRL submissions over HTTPS</text><rect class="lay" x="24" y="132" width="712" height="104" rx="14"/><text class="hd" x="40" y="154">EDGE AND IDENTITY</text><rect class="bx" x="40" y="164" width="216" height="56" rx="10"/><text class="nm" x="54" y="188" font-size="13">Identity provider</text><text class="ln" x="54" y="206">Sign-in, MFA, roles</text><rect class="bx" x="272" y="164" width="216" height="56" rx="10"/><text class="nm" x="286" y="188" font-size="13">API gateway</text><text class="ln" x="286" y="206">Credentials, rate limits</text><rect class="bx" x="504" y="164" width="216" height="56" rx="10"/><text class="nm" x="518" y="188" font-size="13">Web firewall</text><text class="ln" x="518" y="206">Filtering, TLS</text><rect class="lay main" x="24" y="260" width="712" height="248" rx="14"/><text class="hd" x="40" y="282">ENERGY FLOW APPLICATION SERVICES</text><rect class="bx" x="40" y="292" width="158" height="56" rx="10"/><text class="nm" x="54" y="316" font-size="13">Accounts and orgs</text><text class="ln" x="54" y="334">Registration, roles</text><rect class="bx" x="214" y="292" width="158" height="56" rx="10"/><text class="nm" x="228" y="316" font-size="13">Filing and drafts</text><text class="ln" x="228" y="334">Wizard, step plan</text><rect class="bx" x="388" y="292" width="158" height="56" rx="10"/><text class="nm" x="402" y="316" font-size="13">Validation</text><text class="ln" x="402" y="334">Rules, malware scan</text><rect class="bx" x="562" y="292" width="158" height="56" rx="10"/><text class="nm" x="576" y="316" font-size="13">Payment hand-off</text><text class="ln" x="576" y="334">Pay.gov redirect</text><rect class="bx" x="40" y="364" width="158" height="56" rx="10"/><text class="nm" x="54" y="388" font-size="13">Intake</text><text class="ln" x="54" y="406">Accession, receipt</text><rect class="bx" x="214" y="364" width="158" height="56" rx="10"/><text class="nm" x="228" y="388" font-size="13">API intake</text><text class="ln" x="228" y="406">XML and XBRL parsers</text><rect class="bx" x="388" y="364" width="158" height="56" rx="10"/><text class="nm" x="402" y="388" font-size="13">Workflow</text><text class="ln" x="402" y="406">Routing and stages</text><rect class="bx" x="562" y="364" width="158" height="56" rx="10"/><text class="nm" x="576" y="388" font-size="13">Decisions</text><text class="ln" x="576" y="406">Authority, docketing</text><rect class="bx" x="40" y="436" width="158" height="56" rx="10"/><text class="nm" x="54" y="460" font-size="13">Publication</text><text class="ln" x="54" y="478">eLibrary hand-off</text><rect class="bx" x="214" y="436" width="158" height="56" rx="10"/><text class="nm" x="228" y="460" font-size="13">Notifications</text><text class="ln" x="228" y="478">Portal and email</text><rect class="bx" x="388" y="436" width="158" height="56" rx="10"/><text class="nm" x="402" y="460" font-size="13">Dashboards</text><text class="ln" x="402" y="478">Pipeline, bottlenecks</text><rect class="bx" x="562" y="436" width="158" height="56" rx="10"/><text class="nm" x="576" y="460" font-size="13">Help assistant</text><text class="ln" x="576" y="478">Navigation tools only</text><rect class="lay" x="24" y="532" width="712" height="104" rx="14"/><text class="hd" x="40" y="554">ENERGY FLOW DATA</text><rect class="bx" x="40" y="564" width="158" height="56" rx="10"/><text class="nm" x="54" y="588" font-size="13">Database</text><text class="ln" x="54" y="606">Submissions, people</text><rect class="bx" x="214" y="564" width="158" height="56" rx="10"/><text class="nm" x="228" y="588" font-size="13">File store</text><text class="ln" x="228" y="606">Encrypted documents</text><rect class="bx" x="388" y="564" width="158" height="56" rx="10"/><text class="nm" x="402" y="588" font-size="13">Audit log</text><text class="ln" x="402" y="606">Append-only events</text><rect class="bx" x="562" y="564" width="158" height="56" rx="10"/><text class="nm" x="576" y="588" font-size="13">Outbound queue</text><text class="ln" x="576" y="606">Hand-offs, retries</text><rect class="lay" x="24" y="660" width="712" height="168" rx="14"/><text class="hd" x="40" y="682">SYSTEMS OF RECORD AND SERVICES, OUTSIDE THE PORTAL</text><rect class="bx" x="40" y="692" width="216" height="56" rx="10"/><text class="nm" x="54" y="716" font-size="13">Pay.gov</text><text class="ln" x="54" y="734">Fee payments</text><rect class="bx" x="272" y="692" width="216" height="56" rx="10"/><text class="nm" x="286" y="716" font-size="13">Docket system</text><text class="ln" x="286" y="734">Docket numbers</text><rect class="bx" x="504" y="692" width="216" height="56" rx="10"/><text class="nm" x="518" y="716" font-size="13">eLibrary</text><text class="ln" x="518" y="734">Content and cover letters</text><rect class="bx" x="40" y="764" width="216" height="56" rx="10"/><text class="nm" x="54" y="788" font-size="13">Data stores</text><text class="ln" x="54" y="806">EQR, MBR and form databases</text><rect class="bx" x="272" y="764" width="216" height="56" rx="10"/><text class="nm" x="286" y="788" font-size="13">Email service</text><text class="ln" x="286" y="806">Notices</text><rect class="bx" x="504" y="764" width="216" height="56" rx="10"/><text class="nm" x="518" y="788" font-size="13">AI service</text><text class="ln" x="518" y="806">Help answers, agency-approved</text></svg></div><figcaption>Energy Flow is a set of services over one database, handing records on</figcaption></figure>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+<th>Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web browser app</td>
+<td>All filer and staff pages, accessible and responsive; the help panel</td>
+<td>Section 9, NFR-01 to NFR-03</td>
+</tr>
+<tr>
+<td>Identity provider</td>
+<td>Sign-in, second factor, staff roles</td>
+<td>ACC-03, SEC-01</td>
+</tr>
+<tr>
+<td>API gateway</td>
+<td>Authenticates company systems, throttles, logs</td>
+<td>API-01, SEC-03</td>
+</tr>
+<tr>
+<td>Web firewall</td>
+<td>Filters attacks, terminates TLS</td>
+<td>SEC-04</td>
+</tr>
+<tr>
+<td>Accounts and orgs</td>
+<td>Registration, profiles, memberships, access requests</td>
+<td>ACC-01 to ACC-07</td>
+</tr>
+<tr>
+<td>Filing and drafts</td>
+<td>Start questions, step plan, wizard, drafts</td>
+<td>FIL-01 to FIL-08, FIL-13</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Package rules, malware scan, results tied to the package version</td>
+<td>FIL-09, FIL-10, SEC-06</td>
+</tr>
+<tr>
+<td>Payment hand-off</td>
+<td>Pay.gov redirect and confirmation</td>
+<td>FIL-04, INT-02</td>
+</tr>
+<tr>
+<td>Intake</td>
+<td>Accession number, receipt time, receipt notice</td>
+<td>FIL-14, API-02</td>
+</tr>
+<tr>
+<td>API intake</td>
+<td>XML and XBRL parsing, checks, automatic acceptance, cover letter</td>
+<td>API-01 to API-06</td>
+</tr>
+<tr>
+<td>Workflow</td>
+<td>Routing, stages, review steps, data requests, bottleneck metrics</td>
+<td>WFL-01 to WFL-10</td>
+</tr>
+<tr>
+<td>Decisions</td>
+<td>Authority path, accept or reject, docket hand-off</td>
+<td>WFL-07, INT-04</td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>eLibrary hand-off, holds, corrections</td>
+<td>INB-06, INT-05</td>
+</tr>
+<tr>
+<td>Notifications</td>
+<td>Portal notices and email</td>
+<td>NTF-01 to NTF-04</td>
+</tr>
+<tr>
+<td>Dashboards</td>
+<td>Pipeline, bottlenecks, outcomes</td>
+<td>DSH-01 to DSH-03</td>
+</tr>
+<tr>
+<td>Help assistant</td>
+<td>Read and navigate tools, AI call, guided fallback</td>
+<td>HLP-01 to HLP-05</td>
+</tr>
+<tr>
+<td>Calendar</td>
+<td>Obligation rules, item generation, applicability decisions, readiness, milestones, reminders, alerts, export; staff calendar views over submission events</td>
+<td>CAL-01 to CAL-16</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>Submissions, workflow, people, organizations, reference data</td>
+<td>Section 12</td>
+</tr>
+<tr>
+<td>File store</td>
+<td>Documents by security level, encrypted</td>
+<td>SEC-04, SEC-05</td>
+</tr>
+<tr>
+<td>Audit log</td>
+<td>Append-only record of every action</td>
+<td>AUD-01, AUD-03</td>
+</tr>
+<tr>
+<td>Outbound queue</td>
+<td>Reliable hand-offs to docket, eLibrary, data stores, email with retry</td>
+<td>INT-04 to INT-07</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Design principles</strong></p>
+<ul>
+<li>The portal is the system of engagement; dockets, documents, payments and structured data stay in their systems of record.</li>
+<li>Every state change goes through one service and writes one event, so history, notices and dashboards agree.</li>
+<li>Hand-offs are asynchronous and retried; a failed hand-off is visible to staff, never silent.</li>
+<li>Rules (routing, stages, targets, validation, API types, due-date schedules, applicability) live in reference data, not code.</li>
+<li>Calendar items are computed from rules, organization data, dockets and submissions each time they are shown; only the organization's decisions (applicability, assignments, milestones, reminders) are stored.</li>
+</ul></section><section class="sec" id="s11"><div class="eyebrow">Section 11</div><h2>External interfaces and integrations</h2><p class="lead">Energy Flow exchanges data with nine systems; the portal owns none of their records. Protocols and payloads below are proposals to confirm with each system owner; none of the real interfaces exist in the prototype.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>System</th>
+<th>Direction</th>
+<th>Trigger</th>
+<th>Data exchanged</th>
+<th>Proposed mechanism</th>
+<th>Failure handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INT-01</td>
+<td>Identity provider</td>
+<td>Portal to IdP and back</td>
+<td>Sign-in, step-up</td>
+<td>Identity assertion, second factor result, user id</td>
+<td>OpenID Connect or SAML with MFA</td>
+<td>Sign-in refused; no anonymous filing</td>
+</tr>
+<tr>
+<td>INT-02</td>
+<td>Pay.gov</td>
+<td>Portal to Pay.gov and back</td>
+<td>Fee-bearing filing</td>
+<td>Amount, filing reference; payment result and tracking id</td>
+<td>Redirect hand-off with server-side confirmation</td>
+<td>Payment failed state; filer retries; submission blocked</td>
+</tr>
+<tr>
+<td>INT-03</td>
+<td>Company systems (B2B)</td>
+<td>Inbound</td>
+<td>Company sends data</td>
+<td>eTariff, EQR, MBR XML; Form 1, 2, 6, 60, 714 XBRL; acknowledgement with accession or rejection reason</td>
+<td>Authenticated REST API over TLS, per-organization credentials</td>
+<td>Synchronous rejection with reason; idempotent resubmission</td>
+</tr>
+<tr>
+<td>INT-04</td>
+<td>Docket system</td>
+<td>Portal to docket system</td>
+<td>Acceptance of a web filing or eTariff</td>
+<td>New docket request or existing docket number, accession, filing metadata</td>
+<td>Service call or message queue</td>
+<td>Filing stays Accepted pending docket; retried; staff alerted</td>
+</tr>
+<tr>
+<td>INT-05</td>
+<td>eLibrary</td>
+<td>Portal to eLibrary</td>
+<td>Acceptance (or hold release)</td>
+<td>Documents by security level, metadata, docket, accession; or the generated cover letter</td>
+<td>Document ingest service</td>
+<td>Held in an outbound queue; staff see it in Held from eLibrary</td>
+</tr>
+<tr>
+<td>INT-06</td>
+<td>EQR, MBR and form databases</td>
+<td>Portal to databases</td>
+<td>Automatic acceptance</td>
+<td>Parsed records keyed by accession</td>
+<td>Loader per database, in one transaction with acceptance</td>
+<td>Acceptance rolled back; submitter told to resend</td>
+</tr>
+<tr>
+<td>INT-07</td>
+<td>Email service</td>
+<td>Portal to email</td>
+<td>Any notice</td>
+<td>Recipient, subject, body, link</td>
+<td>Agency email relay</td>
+<td>Notice kept in the portal; retried</td>
+</tr>
+<tr>
+<td>INT-09</td>
+<td>Docket system (deadlines)</td>
+<td>Docket system to portal</td>
+<td>Notice or order issued</td>
+<td>Docket number, deadline kind and date, source notice or order</td>
+<td>Read service or event feed</td>
+<td>Calendar shows the last known deadlines and when they were refreshed</td>
+</tr>
+<tr>
+<td>INT-10</td>
+<td>Calendar export</td>
+<td>Portal to the person's calendar product</td>
+<td>Person exports or subscribes</td>
+<td>Item title, date, applicability, why it appears</td>
+<td>CSV and iCalendar file now; a subscribable feed proposed (CAL-15)</td>
+<td>Person re-exports</td>
+</tr>
+<tr>
+<td>INT-08</td>
+<td>AI service for the help assistant</td>
+<td>Browser to AI service</td>
+<td>User asks a question</td>
+<td>Question, short conversation, page context, tool calls</td>
+<td>Agency-approved AI endpoint (the prototype uses Claude through the viewer's account)</td>
+<td>Built-in guided answers</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Proposed API intake contract (INT-03)</strong></p>
+<ol>
+<li>The company system signs in with its organization credential and sends one submission per request: type, organization, reporting period where it applies, and the XML or XBRL payload.</li>
+<li>The portal issues an accession number and runs the checks in BR-12, BR-13 and BR-16.</li>
+<li>The response is synchronous: accepted (with accession), routed to a program office (eTariff), or rejected (with the failed rules).</li>
+<li>The submission appears in the organization's filings marked Sent by API.</li>
+</ol>
+<p>Endpoint names, schemas and taxonomies for each type need to come from the owners of the existing eTariff, EQR, MBR and XBRL services; this document does not specify them.</p></section><section class="sec" id="s12"><div class="eyebrow">Section 12</div><h2>Data model and data dictionary</h2><p class="lead">Submission is the central entity: everything a filer sends, by web or API, is one Submission with its files, parties, events and, when routed, one workflow item. The prototype holds these in browser memory; the target is a relational store. Field names below are the logical names; types are proposed.</p>
+<h3 class="sub">12.1 Entities</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Purpose</th>
+<th>Key relationships</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Person</td>
+<td>A registered user account</td>
+<td>Has many Memberships; files many Submissions</td>
+</tr>
+<tr>
+<td>Organization</td>
+<td>A company or body that files</td>
+<td>Has many Memberships; is the acting organization of Submissions</td>
+</tr>
+<tr>
+<td>Membership</td>
+<td>A person's role in one organization</td>
+<td>Person ↔ Organization, with role and status</td>
+</tr>
+<tr>
+<td>Submission</td>
+<td>One filing or API submission</td>
+<td>Belongs to a filer Person and Organization; has Files, Parties, Events; may have a Workflow item, Decision, Publication, Notification</td>
+</tr>
+<tr>
+<td>File</td>
+<td>A document or data payload in a submission</td>
+<td>Belongs to Submission</td>
+</tr>
+<tr>
+<td>Party and Contact</td>
+<td>Who the filing is on behalf of, and their signer or other contact</td>
+<td>Party belongs to Submission; Contact links Party to a Person</td>
+</tr>
+<tr>
+<td>Information request</td>
+<td>OSEC request for corrections</td>
+<td>Belongs to Submission</td>
+</tr>
+<tr>
+<td>Workflow item</td>
+<td>The submission's place in a program office</td>
+<td>One per routed Submission; holds acknowledgment, recommendation, instructions, data request</td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>Accept or reject with authority path</td>
+<td>One per decided Submission</td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>What went to eLibrary and when</td>
+<td>One per published Submission</td>
+</tr>
+<tr>
+<td>Acceptance notification</td>
+<td>Notice to OSEC and an office of an automatic acceptance</td>
+<td>One per auto-accepted API Submission</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>One line of activity history</td>
+<td>Many per Submission</td>
+</tr>
+<tr>
+<td>Notice</td>
+<td>A message to a person</td>
+<td>Belongs to Person; may point at a Submission</td>
+</tr>
+<tr>
+<td>Draft</td>
+<td>An unsent filing in progress</td>
+<td>Belongs to Person; becomes a Submission on submit</td>
+</tr>
+<tr>
+<td>Calendar item</td>
+<td>A dated obligation, deadline, milestone or past activity shown on the calendar</td>
+<td>Computed from Organization, Docket subscription, Order directive, Submission and Reference data; not stored</td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>The organization's stored decisions about one item</td>
+<td>One per calendar item that someone has acted on</td>
+</tr>
+<tr>
+<td>Applicability decision</td>
+<td>Confirmed or not applicable for one form and organization</td>
+<td>Organization ↔ form</td>
+</tr>
+<tr>
+<td>Docket subscription</td>
+<td>A person following a docket's deadlines</td>
+<td>Person ↔ docket</td>
+</tr>
+<tr>
+<td>Order directive</td>
+<td>A filing directed by an order, with its due date</td>
+<td>Belongs to Organization and docket</td>
+</tr>
+<tr>
+<td>Reference data</td>
+<td>Offices, categories, kinds, types and fees, routing table, stages with targets and limits, reasons, due-date schedules, applicability rules</td>
+<td>Used by the above</td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">12.2 Submission</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>submission_id</td>
+<td>integer</td>
+<td>Yes</td>
+<td>Internal key</td>
+<td>1008</td>
+</tr>
+<tr>
+<td>number</td>
+<td>string</td>
+<td>Yes</td>
+<td>Display number</td>
+<td>S-1008</td>
+</tr>
+<tr>
+<td>accession_no</td>
+<td>string</td>
+<td>Yes</td>
+<td>Issued on receipt (format is a placeholder)</td>
+<td>20260821-5008</td>
+</tr>
+<tr>
+<td>channel</td>
+<td>enum: Web, API</td>
+<td>Yes</td>
+<td>How it arrived</td>
+<td>API</td>
+</tr>
+<tr>
+<td>filer_person_id</td>
+<td>FK Person</td>
+<td>Yes</td>
+<td>Who submitted, or the organization's API account</td>
+<td></td>
+</tr>
+<tr>
+<td>org_id</td>
+<td>FK Organization</td>
+<td>No</td>
+<td>Acting organization; empty for an individual</td>
+<td></td>
+</tr>
+<tr>
+<td>category</td>
+<td>enum</td>
+<td>Yes</td>
+<td>Direction: General, Annual Charges, Hearing/ALJ, Gas, Electric, Oil, Hydro: Licensing/Compliance, Hydro: Dam Safety</td>
+<td>Electric</td>
+</tr>
+<tr>
+<td>kind</td>
+<td>string</td>
+<td>Yes</td>
+<td>Filing kind, or eTariff, EQR, MBR, Form 1, 2, 6, 60, 714</td>
+<td>Request for Rehearing</td>
+</tr>
+<tr>
+<td>filing_type</td>
+<td>string</td>
+<td>Yes</td>
+<td>Filing type, Structured XML or XBRL</td>
+<td>Form 556</td>
+</tr>
+<tr>
+<td>workflow_type</td>
+<td>derived</td>
+<td></td>
+<td>Electric, Hydro, Pipeline, Litigation, Rehearing, Settlement, Other</td>
+<td>Rehearing</td>
+</tr>
+<tr>
+<td>fee_amount</td>
+<td>decimal (USD)</td>
+<td>Yes</td>
+<td>0 when none</td>
+<td>36160.00</td>
+</tr>
+<tr>
+<td>fee_paid</td>
+<td>boolean</td>
+<td>Yes</td>
+<td>Pay.gov result</td>
+<td>true</td>
+</tr>
+<tr>
+<td>docket_no</td>
+<td>string</td>
+<td>No</td>
+<td>Existing docket, or issued on acceptance; empty for EQR, MBR, forms</td>
+<td>XX26-501-000</td>
+</tr>
+<tr>
+<td>description</td>
+<td>string (255)</td>
+<td>Yes</td>
+<td>Filer's description</td>
+<td></td>
+</tr>
+<tr>
+<td>filing_mode</td>
+<td>enum: behalf, individual</td>
+<td>Yes</td>
+<td>On behalf of parties, or as an individual</td>
+<td>behalf</td>
+</tr>
+<tr>
+<td>status</td>
+<td>enum</td>
+<td>Yes</td>
+<td>See 8.1</td>
+<td>PROGRAM_OFFICE</td>
+</tr>
+<tr>
+<td>owner_person_id</td>
+<td>FK Person</td>
+<td>No</td>
+<td>OSEC reviewer</td>
+<td></td>
+</tr>
+<tr>
+<td>related_submission_id</td>
+<td>FK Submission</td>
+<td>No</td>
+<td>Original filing for a supplement or rehearing</td>
+<td></td>
+</tr>
+<tr>
+<td>relation_kind</td>
+<td>enum: Supplement, Rehearing</td>
+<td>No</td>
+<td></td>
+<td>Rehearing</td>
+</tr>
+<tr>
+<td>amended</td>
+<td>boolean</td>
+<td>Yes</td>
+<td>Supplemented or answered a data request</td>
+<td>false</td>
+</tr>
+<tr>
+<td>auto_docketed</td>
+<td>boolean</td>
+<td>Yes</td>
+<td>eTariff docketed on acceptance</td>
+<td>true</td>
+</tr>
+<tr>
+<td>auto_accepted</td>
+<td>boolean</td>
+<td>Yes</td>
+<td>EQR, MBR, XBRL accepted by the system</td>
+<td>false</td>
+</tr>
+<tr>
+<td>stored_in_database</td>
+<td>boolean</td>
+<td>Yes</td>
+<td>Data parsed into its own database; eLibrary holds a cover letter only</td>
+<td>false</td>
+</tr>
+<tr>
+<td>reject_reason</td>
+<td>string</td>
+<td>No</td>
+<td>Reason shown to the filer</td>
+<td>Wrong docket or filing type</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>timestamp</td>
+<td>Yes</td>
+<td>Receipt time; preserved as the official timestamp</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">12.3 Workflow item (one per routed submission)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>office</td>
+<td>enum: OEMR, OEP, OER, OE, OGC</td>
+<td>Current office</td>
+</tr>
+<tr>
+<td>stage</td>
+<td>0 to 4</td>
+<td>Intake, Assigned, Analysis, Quality review, Ready for decision</td>
+</tr>
+<tr>
+<td>entered_stage_at</td>
+<td>timestamp</td>
+<td>Drives time in stage and lateness</td>
+</tr>
+<tr>
+<td>routed_at</td>
+<td>timestamp</td>
+<td>First routing time</td>
+</tr>
+<tr>
+<td>analyst</td>
+<td>string</td>
+<td>Assigned analyst</td>
+</tr>
+<tr>
+<td>blocked_reason</td>
+<td>string</td>
+<td>Empty when not blocked</td>
+</tr>
+<tr>
+<td>ack_by, ack_at</td>
+<td>string, timestamp</td>
+<td>Receipt acknowledgment</td>
+</tr>
+<tr>
+<td>rec_decision</td>
+<td>enum: Accept, Reject</td>
+<td>Recommendation</td>
+</tr>
+<tr>
+<td>rec_rationale</td>
+<td>text</td>
+<td>Required for Reject</td>
+</tr>
+<tr>
+<td>rec_by, rec_at</td>
+<td>string, timestamp</td>
+<td></td>
+</tr>
+<tr>
+<td>dk_instruction</td>
+<td>enum: new, existing, none</td>
+<td>Docketing instruction</td>
+</tr>
+<tr>
+<td>dk_number</td>
+<td>string</td>
+<td>Required when existing</td>
+</tr>
+<tr>
+<td>el_instruction</td>
+<td>enum: all, public, hold</td>
+<td>Publish all files at their level, public only, or hold</td>
+</tr>
+<tr>
+<td>el_description</td>
+<td>string</td>
+<td>eLibrary document description</td>
+</tr>
+<tr>
+<td>inst_by, inst_at</td>
+<td>string, timestamp</td>
+<td>System for eTariff</td>
+</tr>
+<tr>
+<td>dr_message, dr_due, dr_at, dr_by</td>
+<td>text, date, timestamp, string</td>
+<td>Open data request</td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">12.4 Decision, publication and notification</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Decision</td>
+<td>outcome</td>
+<td>enum: Accept, Reject</td>
+<td></td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>authority</td>
+<td>enum: Delegated authority, Commission vote, Automatic</td>
+<td></td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>note</td>
+<td>text</td>
+<td>Required to reject</td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>decided_by, decided_at</td>
+<td>string, timestamp</td>
+<td></td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>published_at, published_by</td>
+<td>timestamp, string</td>
+<td>System for automatic publication</td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>el_scope</td>
+<td>enum: all, public</td>
+<td>Released from hold becomes all</td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>correction_reason, corrected_at</td>
+<td>text, timestamp</td>
+<td>Correct or replace published record</td>
+</tr>
+<tr>
+<td>Acceptance notification</td>
+<td>office</td>
+<td>enum: OE, OEMR</td>
+<td></td>
+</tr>
+<tr>
+<td>Acceptance notification</td>
+<td>seen_by_osec, seen_by_office</td>
+<td>boolean</td>
+<td>OSEC flag is preset for XBRL forms (Proposed)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">12.5 People, organizations and files</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Person</td>
+<td>email</td>
+<td>string</td>
+<td>Unique sign-in name</td>
+</tr>
+<tr>
+<td>Person</td>
+<td>name, address, phone</td>
+<td>strings</td>
+<td>From registration</td>
+</tr>
+<tr>
+<td>Person</td>
+<td>role</td>
+<td>enum: filer, staff</td>
+<td>Staff roles are refined in 13.1</td>
+</tr>
+<tr>
+<td>Membership</td>
+<td>org_id, person_id</td>
+<td>FKs</td>
+<td></td>
+</tr>
+<tr>
+<td>Membership</td>
+<td>org_role</td>
+<td>enum: Organization Administrator, Filing Representative, Preparer</td>
+<td></td>
+</tr>
+<tr>
+<td>Membership</td>
+<td>pending</td>
+<td>boolean</td>
+<td>Awaiting approval</td>
+</tr>
+<tr>
+<td>File</td>
+<td>name</td>
+<td>string (100)</td>
+<td></td>
+</tr>
+<tr>
+<td>File</td>
+<td>size_bytes</td>
+<td>integer</td>
+<td>Up to 250 MB</td>
+</tr>
+<tr>
+<td>File</td>
+<td>description</td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td>File</td>
+<td>security_level</td>
+<td>enum: Public, Privileged, CEII</td>
+<td>Drives eLibrary access</td>
+</tr>
+<tr>
+<td>Contact</td>
+<td>email, contact_role</td>
+<td>string, enum: Signer, Other contact</td>
+<td>Must be a registered Person</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>at, label, actor</td>
+<td>timestamp, string, string</td>
+<td>Activity history</td>
+</tr>
+<tr>
+<td>Notice</td>
+<td>person_id, text, submission_id, read, at</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">12.6 Reference data</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Office</td>
+<td>OEMR, OEP, OER, OE, OGC with full names</td>
+</tr>
+<tr>
+<td>Routing</td>
+<td>Workflow type to office (BR-01); rehearing default by subject (BR-02)</td>
+</tr>
+<tr>
+<td>Category, kind, type, fee</td>
+<td>The three linked lists used in filing</td>
+</tr>
+<tr>
+<td>Stage</td>
+<td>Name, target days, limit (8.3)</td>
+</tr>
+<tr>
+<td>Reason</td>
+<td>Information request and rejection reasons</td>
+</tr>
+<tr>
+<td>Validation rule</td>
+<td>Allowed file formats, name and size limits, docket pattern</td>
+</tr>
+<tr>
+<td>API submission type</td>
+<td>eTariff, EQR, MBR, Form 1, 2, 6, 60, 714 with format, path, notified office and target database</td>
+</tr>
+<tr>
+<td>Due-date schedule</td>
+<td>Per recurring form: quarterly or annual, due month and day, reporting window, regulatory basis</td>
+</tr>
+<tr>
+<td>Applicability rule</td>
+<td>Per form: organization types and status flags that make it Required, Potentially applicable or Optional</td>
+</tr>
+<tr>
+<td>Organization profile</td>
+<td>Organization type (for example Public utility) and status flags (for example Market-based rate authority) used by the rules</td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">12.7 Calendar</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Calendar item</td>
+<td>item_key</td>
+<td>string</td>
+<td>Organization, form and due date, for example Sample Power Company, EQR, 2027-01-31</td>
+</tr>
+<tr>
+<td>Calendar item</td>
+<td>due_date</td>
+<td>date</td>
+<td>Due or event date</td>
+</tr>
+<tr>
+<td>Calendar item</td>
+<td>applicability</td>
+<td>enum: Required, Potentially applicable, Docket-related, Optional, Internal milestone, Filing activity</td>
+<td>BR-22</td>
+</tr>
+<tr>
+<td>Calendar item</td>
+<td>source</td>
+<td>enum: recurring, docket, tariff, registration, notice, internal, activity</td>
+<td>BR-21</td>
+</tr>
+<tr>
+<td>Calendar item</td>
+<td>why, basis</td>
+<td>text</td>
+<td>Why it appears; regulatory basis</td>
+</tr>
+<tr>
+<td>Calendar item</td>
+<td>submission_id</td>
+<td>FK Submission</td>
+<td>Set once satisfied (BR-25)</td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>item_key</td>
+<td>string</td>
+<td></td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>preparer, reviewer, submitter</td>
+<td>FK Person</td>
+<td>Submitter must be an Organization Administrator or Filing Representative</td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>data_ready</td>
+<td>boolean</td>
+<td>Readiness check</td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>milestones</td>
+<td>list of (name, date)</td>
+<td>Draft ready, legal review, approval, planned submission</td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>reminder_days</td>
+<td>integer 0 to 14</td>
+<td>0 means no reminder</td>
+</tr>
+<tr>
+<td>Obligation state</td>
+<td>linked_submission_id</td>
+<td>FK Submission</td>
+<td>Draft or submission started from the item</td>
+</tr>
+<tr>
+<td>Applicability decision</td>
+<td>org_id, form, decision, by, at</td>
+<td>FK, string, enum: yes, no, string, timestamp</td>
+<td></td>
+</tr>
+<tr>
+<td>Docket subscription</td>
+<td>person_id, docket_no, at</td>
+<td>FK, string, timestamp</td>
+<td></td>
+</tr>
+<tr>
+<td>Order directive</td>
+<td>org_id, docket_no, title, issued_at, due_date, basis</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Docket deadline</td>
+<td>docket_no, kind, due_date, filing_kind, source</td>
+<td></td>
+<td>Comment, reply comment and intervention deadlines</td>
+</tr>
+</tbody>
+</table></div></section><section class="sec" id="s13"><div class="eyebrow">Section 13</div><h2>Security, roles and access rights</h2><p class="lead">Access is decided by two things together: the person's role (external or internal) and, for external users, their organization membership and role in it. The prototype has two internal roles (filer, staff); the finer staff roles below are Proposed for the build.</p>
+<h3 class="sub">13.1 Roles</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Visitor</td>
+<td>Public pages, registration, sign-in</td>
+</tr>
+<tr>
+<td>Individual filer</td>
+<td>Own filings</td>
+</tr>
+<tr>
+<td>Preparer</td>
+<td>Drafts for the organization; no certify or submit</td>
+</tr>
+<tr>
+<td>Filing Representative</td>
+<td>Prepare, certify, submit and follow up for the organization</td>
+</tr>
+<tr>
+<td>Organization Administrator</td>
+<td>All of the organization's filings; approve access</td>
+</tr>
+<tr>
+<td>API client</td>
+<td>One organization's system credential; submit API types only</td>
+</tr>
+<tr>
+<td>OSEC reviewer</td>
+<td>Inbox, routing, held releases, published-record corrections</td>
+</tr>
+<tr>
+<td>Program office analyst</td>
+<td>Own office's workflow cards and notifications</td>
+</tr>
+<tr>
+<td>Program office manager</td>
+<td>Analyst rights plus reassign, balance, decide under delegated authority</td>
+</tr>
+<tr>
+<td>Decision recorder</td>
+<td>Records Commission votes</td>
+</tr>
+<tr>
+<td>System administrator</td>
+<td>Reference data, roles, configuration; no decisions on filings</td>
+</tr>
+<tr>
+<td>Auditor</td>
+<td>Read-only access to all records and the audit log</td>
+</tr>
+</tbody>
+</table></div>
+<h3 class="sub">13.2 Access rights matrix</h3>
+<p>Y = allowed, O = own organization only, M = own filings only, F = own office only, — = not allowed.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Visitor</th>
+<th>Preparer</th>
+<th>Filing Rep.</th>
+<th>Org. Admin</th>
+<th>API client</th>
+<th>OSEC</th>
+<th>PO analyst</th>
+<th>PO manager</th>
+<th>Sys. admin</th>
+<th>Auditor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Register, sign in</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+</tr>
+<tr>
+<td>Create and save a draft</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Certify and submit</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Send API submissions</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>View filings and status</td>
+<td class="cell-n">—</td>
+<td class="cell-m">M</td>
+<td class="cell-m">M</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-y">Y</td>
+<td class="cell-f">F</td>
+<td class="cell-f">F</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+</tr>
+<tr>
+<td>Respond, supplement, withdraw, request rehearing</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-m">M</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Approve organization access</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y (no admin)</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Clear, request information, reject in inbox</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Route and reroute</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-f">F</td>
+<td class="cell-f">F</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Acknowledge, recommend, give instructions, data request</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-f">F</td>
+<td class="cell-f">F</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Assign, balance workload</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-f">F</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Record decision (delegated)</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-f">F</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Record Commission vote</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Release hold, correct published record</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>See Privileged and CEII files</td>
+<td class="cell-n">—</td>
+<td class="cell-m">M</td>
+<td class="cell-m">M</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-y">Y</td>
+<td class="cell-f">F</td>
+<td class="cell-f">F</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+</tr>
+<tr>
+<td>View My Filing Calendar</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Confirm applicability, assign, set milestones</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Set reminders, subscribe to dockets, export</td>
+<td class="cell-n">—</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-o">O</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>View staff calendar</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+</tr>
+<tr>
+<td>Manage reference data and roles</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-n">—</td>
+</tr>
+<tr>
+<td>Read audit log</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-n">—</td>
+<td class="cell-y">Y</td>
+<td class="cell-y">Y</td>
+</tr>
+</tbody>
+</table></div>
+<p>Recording a Commission vote belongs to the Decision recorder role in 13.1. Who exactly may hold it is an open decision. The calendar rows are Proposed; whether a Preparer may confirm applicability, and whether analysts see all offices on the staff calendar by default, are open issues 20 and 23.</p>
+<h3 class="sub">13.3 Security controls</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Control</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SEC-01</td>
+<td>Multi-factor sign-in for every user; phishing-resistant factors for staff</td>
+<td>Prototype simulates the code step</td>
+</tr>
+<tr>
+<td>SEC-02</td>
+<td>Role and organization checks on the server for every read and action, not only hidden buttons</td>
+<td>Prototype checks in the browser only</td>
+</tr>
+<tr>
+<td>SEC-03</td>
+<td>Separate credentials per API client, rotated, scoped to one organization and the API types it may send</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-04</td>
+<td>TLS for all traffic; encryption at rest for submissions, files and databases</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-05</td>
+<td>Privileged and CEII files stored and served under their own access rules; never published to the public eLibrary version</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-06</td>
+<td>Malware scanning of every uploaded or transmitted file before it is stored</td>
+<td>Simulated in the prototype</td>
+</tr>
+<tr>
+<td>SEC-07</td>
+<td>No card or bank data handled by the portal; Pay.gov only</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-08</td>
+<td>Session timeout and re-authentication for certification and decisions</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-09</td>
+<td>Tamper-evident audit log of sign-ins, access changes, submissions, decisions and publications</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-10</td>
+<td>Least privilege and separation of duties: the person who recommends should not be the only approver of a delegated decision</td>
+<td><span class="pill proposed">Proposed; confirm with OGC</span></td>
+</tr>
+<tr>
+<td>SEC-11</td>
+<td>Personal data minimized and covered by a privacy impact assessment and system of records notice</td>
+<td></td>
+</tr>
+<tr>
+<td>SEC-12</td>
+<td>Help assistant limited to read and navigation tools within the person's own rights; page data treated as data, not instructions</td>
+<td>See section 14</td>
+</tr>
+<tr>
+<td>SEC-13</td>
+<td>FISMA authorization at the impact level set by the agency, with NIST SP 800-53 controls</td>
+<td>Impact level to be confirmed</td>
+</tr>
+</tbody>
+</table></div></section><section class="sec" id="s14"><div class="eyebrow">Section 14</div><h2>Help assistant</h2><p class="lead">The help assistant guides and navigates but never acts on a record: it can read the person's situation, open pages and filings, and open a task's start page, and the person always presses the button that changes anything.</p>
+<p><strong>How it works</strong></p>
+<ol>
+<li>A Help button sits on every page; the panel shows suggested questions for the person's role.</li>
+<li>Each question goes to the AI service with standing instructions, a site guide, the person's current situation (role, page, organization, drafts, filings needing action) and the last ten turns.</li>
+<li>The AI may call page tools; each tool runs in the browser with the person's own rights and its effect is shown under the reply (for example "Opened S-1008").</li>
+<li>If the AI service is unavailable or the person declines it, built-in guided answers with action buttons take over.</li>
+</ol>
+<p><strong>Tools offered to the AI</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Who gets it</th>
+<th>What it does</th>
+<th>Limits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>get_situation</td>
+<td>Everyone</td>
+<td>Returns role, page, organization context, draft progress, filings needing action</td>
+<td>Own data only</td>
+</tr>
+<tr>
+<td>go_to_page</td>
+<td>Everyone</td>
+<td>Opens a page</td>
+<td>Only pages allowed for the role</td>
+</tr>
+<tr>
+<td>find_filings</td>
+<td>Signed-in users</td>
+<td>Searches filings by number, docket, accession or words; returns up to 8</td>
+<td>Filers: filings they may see</td>
+</tr>
+<tr>
+<td>open_filing</td>
+<td>Signed-in users</td>
+<td>Opens one filing on the right page</td>
+<td>Filers: filings they may see</td>
+</tr>
+<tr>
+<td>open_task_start</td>
+<td>Filers</td>
+<td>Opens the start page with new, respond, supplement or rehearing selected</td>
+<td>Creates and submits nothing</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Safeguards</strong></p>
+<ul>
+<li>No tool can submit, pay, certify, accept, reject, withdraw, publish or edit.</li>
+<li>Filing descriptions and other site data are passed as data, and the instructions say so.</li>
+<li>Replies are shown as plain text, never as markup.</li>
+<li>Each answer is a new call with no memory beyond the turns the page sends.</li>
+<li>In production the AI endpoint, data handling and retention must be approved by the agency; the prototype uses Claude through the viewer's own Claude account.</li>
+</ul></section><section class="sec" id="s15"><div class="eyebrow">Section 15</div><h2>Non-functional requirements</h2><p class="lead">Numeric targets below are proposed starting points for the agency to set; none is an agency commitment.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Area</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NFR-01</td>
+<td>Accessibility</td>
+<td>Meet Section 508 (WCAG 2.1 AA): keyboard use, visible focus, screen-reader labels, colour contrast, no colour-only meaning. The prototype has focus outlines and labels but has not had an accessibility audit.</td>
+</tr>
+<tr>
+<td>NFR-02</td>
+<td>Federal web standards</td>
+<td>USWDS banner and identifier, required links, plain language, mobile-friendly layout.</td>
+</tr>
+<tr>
+<td>NFR-03</td>
+<td>Responsive design</td>
+<td>Every page works at 390 px wide with no sideways scrolling. Tested in the prototype.</td>
+</tr>
+<tr>
+<td>NFR-04</td>
+<td>Availability</td>
+<td><span class="pill proposed">Proposed 99.9% monthly for filing and API intake, with a published maintenance window.</span></td>
+</tr>
+<tr>
+<td>NFR-05</td>
+<td>Deadlines</td>
+<td>Receipt timestamp is the official filing time; the system must accept filings up to the deadline minute and record time in Eastern time.</td>
+</tr>
+<tr>
+<td>NFR-06</td>
+<td>Performance</td>
+<td><span class="pill proposed">Proposed: pages under 2 seconds at the 95th percentile; API acknowledgement under 30 seconds for files up to 250 MB.</span></td>
+</tr>
+<tr>
+<td>NFR-07</td>
+<td>Capacity</td>
+<td>Files up to 250 MB each and up to 200 files per security level per filing (limits taken from the current site's guidance).</td>
+</tr>
+<tr>
+<td>NFR-08</td>
+<td>Records</td>
+<td>Submissions, events and decisions kept under the agency's NARA schedule; legal holds respected; public and non-public versions kept apart.</td>
+</tr>
+<tr>
+<td>NFR-09</td>
+<td>Audit</td>
+<td>Every state change is recorded with time, actor and reason; records cannot be altered, only superseded.</td>
+</tr>
+<tr>
+<td>NFR-10</td>
+<td>Recoverability</td>
+<td><span class="pill proposed">Proposed: recovery point 15 minutes, recovery time 4 hours for intake.</span></td>
+</tr>
+<tr>
+<td>NFR-11</td>
+<td>Usability</td>
+<td>Plain-language labels and errors that say what to fix; undo for reversible staff actions.</td>
+</tr>
+<tr>
+<td>NFR-12</td>
+<td>Supportability</td>
+<td>Help panel on every page; a support contact; release notes for changes to forms.</td>
+</tr>
+<tr>
+<td>NFR-13</td>
+<td>Interoperability</td>
+<td>API intake documented with schemas, test environment and sample payloads per type.</td>
+</tr>
+<tr>
+<td>NFR-14</td>
+<td>Privacy</td>
+<td>Collect only what each step needs; personal data shown only to those with rights.</td>
+</tr>
+</tbody>
+</table></div></section><section class="sec" id="s16"><div class="eyebrow">Section 16</div><h2>Monitoring, reporting and audit</h2><p class="lead">Staff monitor flow and bottlenecks from the Workflow page and outcomes from the Office dashboard; filers see their own status and history.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>View</th>
+<th>Audience</th>
+<th>Measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>End-to-end pipeline</td>
+<td>OSEC, managers</td>
+<td>Count at each step: Received, OSEC review, Cleared to route, Program office review, Awaiting decision, Held from eLibrary, Published to eLibrary</td>
+</tr>
+<tr>
+<td>Biggest bottlenecks</td>
+<td>Managers</td>
+<td>Top three office stages by late filings and excess over the limit, with average time in stage</td>
+</tr>
+<tr>
+<td>Office load cards</td>
+<td>Managers</td>
+<td>Filings per office, average days since routing, a heat strip by stage</td>
+</tr>
+<tr>
+<td>Office lanes</td>
+<td>Analysts, managers</td>
+<td>Cards per stage with time in stage, blocked flag, data request, review progress, analyst</td>
+</tr>
+<tr>
+<td>Program office review steps</td>
+<td>Managers</td>
+<td>Receipt acknowledged, awaiting acknowledgment, recommend accept, recommend reject, instructions recorded, data requests open</td>
+</tr>
+<tr>
+<td>Rehearings by office</td>
+<td>Managers, OGC</td>
+<td>Rehearings held by each of the five offices</td>
+</tr>
+<tr>
+<td>Acceptance notifications</td>
+<td>OSEC, OE, OEMR</td>
+<td>Unseen automatic acceptances of EQR, MBR and XBRL forms</td>
+</tr>
+<tr>
+<td>Office dashboard</td>
+<td>OSEC, managers</td>
+<td>Open by age, outcomes, docketing path, decision authority, workload by reviewer, reasons for requests and rejections</td>
+</tr>
+<tr>
+<td>Filer workspace</td>
+<td>Filers</td>
+<td>Tasks, drafts, open filings, deadlines, filings by status and month</td>
+</tr>
+<tr>
+<td>My Filing Calendar</td>
+<td>Filers</td>
+<td>Obligations by Month, Quarter or Year; required, to-confirm, at-risk, missed and submitted counts per organization</td>
+</tr>
+<tr>
+<td>Staff calendar</td>
+<td>OSEC, analysts, managers</td>
+<td>Received, responses due, stage targets (past target marked) and acceptances by Month, Quarter or Year, by office</td>
+</tr>
+<tr>
+<td>Activity history</td>
+<td>Everyone with access</td>
+<td>Every event on a submission</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Operational monitoring to add in the build:</strong> API intake volumes and rejection rates by type, queue depth for docket and eLibrary hand-offs, integration failures, sign-in failures, and help assistant usage and fallback rate.</p></section><section class="sec" id="s17"><div class="eyebrow">Section 17</div><h2>Traceability to the design decks and prototype</h2><p class="lead">Every workflow slide of the FERConnect deck and every design slide of the My FERC Filing Calendar deck maps to requirements here; the structured reporting modules are covered only by the API intake.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Deck slide</th>
+<th>Topic</th>
+<th>Requirements</th>
+<th>In prototype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Access, Submit, Process, Decide, Publish</td>
+<td>Sections 6, 9</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>4, 22</td>
+<td>Recognize existing profile; confirm role and authority; returning-user actions</td>
+<td>ACC-04, ACC-05, WSP-03</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>5, 13</td>
+<td>Preparation; wizard builds steps from answers</td>
+<td>FIL-01 to FIL-08, FIL-13</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Validation, payment, certification, receipt</td>
+<td>FIL-04, FIL-09 to FIL-12, FIL-14</td>
+<td>Yes (payment simulated)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Intake: accession, docketing, classify, route, assign</td>
+<td>FIL-14, API-02, INB-05, WFL-04</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Review loop with data request and quality review</td>
+<td>WFL-05, WFL-06, TRK-04</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Delegated or Commission authority; rehearing, compliance, appeal</td>
+<td>WFL-07, TRK-07</td>
+<td>Yes, except compliance filing type and appeal</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Publication with access controls and correction</td>
+<td>INB-06, BR-15</td>
+<td>Yes (eLibrary simulated)</td>
+</tr>
+<tr>
+<td>11, 14, 16</td>
+<td>Structured reporting (EQR, eTariff, MBR)</td>
+<td>API-01 to API-07</td>
+<td>Simulated API intake</td>
+</tr>
+<tr>
+<td>12, 15</td>
+<td>Portal versus integrated systems boundary</td>
+<td>Sections 10, 11</td>
+<td>Described</td>
+</tr>
+<tr>
+<td>17</td>
+<td>My FERConnect dashboard</td>
+<td>WSP-01 to WSP-06</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>18</td>
+<td>One account, several companies</td>
+<td>ACC-04 to ACC-07, FIL-12</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Common status model</td>
+<td>Section 8</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>20</td>
+<td>Cross-cutting controls</td>
+<td>Sections 13, 15</td>
+<td>Partly</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Incremental build</td>
+<td>Section 18</td>
+<td>Not applicable</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>My FERC Filing Calendar deck</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Deck slide</th>
+<th>Topic</th>
+<th>Requirements</th>
+<th>In prototype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Month, Agenda and Annual views</td>
+<td>CAL-01 to CAL-03 (Year replaces Annual; Quarter added)</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Item card: relevance, readiness, assignment, next action</td>
+<td>CAL-06, CAL-08, CAL-09</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Applicability categories and how they are decided</td>
+<td>BR-22, CAL-05, CAL-07</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Six item sources and the actions on an item</td>
+<td>BR-21, CAL-04, CAL-09</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>7, MVP</td>
+<td>Personalized deadlines, organization filters, docket subscriptions, deep links, reminders, export</td>
+<td>CAL-04, CAL-09, CAL-12, CAL-13</td>
+<td>Yes (export as CSV and iCalendar text)</td>
+</tr>
+<tr>
+<td>7, Enhance</td>
+<td>Assignment, internal milestones, readiness checks, status tracking, compliance view</td>
+<td>CAL-08, CAL-10, CAL-12</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>7, Intelligence</td>
+<td>Conflict alerts, recommended preparation dates, risk indicators</td>
+<td>CAL-10, CAL-11</td>
+<td>Partly: dependencies between items are not modelled</td>
+</tr>
+<tr>
+<td>7, Intelligence</td>
+<td>Reading orders and notices for deadlines</td>
+<td>CAL-16</td>
+<td>No, later phase</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Prototype references</strong></p>
+<ul>
+<li>Energy Flow interactive prototype (sample data), version 19 of the published page.</li>
+<li>Automated checks run against it: 221 scripted checks across eight test suites covering filing, lifecycle, workflow, review steps, the help assistant, the filer calendar, the staff calendar and the Month, Quarter and Year views.</li>
+</ul></section><section class="sec" id="s18"><div class="eyebrow">Section 18</div><h2>Open issues and decisions to confirm</h2><p class="lead">Twenty-four decisions need an owner's answer before build; each names the requirement it would change.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>Affects</th>
+<th>Suggested owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Are OER (pipelines) and OE the right office names and assignments? ferc.gov lists OER as Electric Reliability and the enforcement office as OERA.</td>
+<td>BR-01, BR-03</td>
+<td>Business owner</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Should a rehearing default to its subject's office, or always start at OGC?</td>
+<td>BR-02</td>
+<td>OGC</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Should OE take only rehearings in the workflow?</td>
+<td>BR-03</td>
+<td>OE</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Are the five stages, targets and limits right for each office?</td>
+<td>8.3, WFL-02</td>
+<td>Program offices</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Who records a decision under delegated authority, and who records a Commission vote?</td>
+<td>WFL-07, 13.2</td>
+<td>OGC, OSEC</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Should a reject recommendation send the filing anywhere automatically?</td>
+<td>BR-07</td>
+<td>Program offices</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Should the filer see the recommendation and instructions?</td>
+<td>TRK-02</td>
+<td>OSEC</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Is the eLibrary hold option needed, given that all accepted filings publish?</td>
+<td>BR-15</td>
+<td>Records, OSEC</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Which web filing kinds, if any, are accepted and docketed without program office review?</td>
+<td>BR-10</td>
+<td>OSEC</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Do EQR and MBR notifications also go to OSEC, and do XBRL form notifications?</td>
+<td>BR-12, BR-13, API-06</td>
+<td>OSEC, OE</td>
+</tr>
+<tr>
+<td>11</td>
+<td>One database per XBRL form, or one shared database?</td>
+<td>BR-14, INT-06</td>
+<td>Data owners</td>
+</tr>
+<tr>
+<td>12</td>
+<td>What exactly does the cover letter contain?</td>
+<td>TRK-08, INT-05</td>
+<td>Records</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Real accession and docket number formats</td>
+<td>12.2</td>
+<td>OSEC</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Allowed file formats, size limits and validation rules per filing type</td>
+<td>FIL-09</td>
+<td>OSEC, program offices</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Until when may a filer withdraw?</td>
+<td>BR-20</td>
+<td>OGC</td>
+</tr>
+<tr>
+<td>16</td>
+<td>API endpoints, credentials, schemas and taxonomies for each structured type</td>
+<td>INT-03, API-07</td>
+<td>Owners of eTariff, EQR, MBR, XBRL services</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Which AI service may power the help assistant, and under what data rules?</td>
+<td>Section 14</td>
+<td>CIO, privacy office</td>
+</tr>
+<tr>
+<td>18</td>
+<td>FISMA impact level and the privacy documents needed</td>
+<td>SEC-11, SEC-13</td>
+<td>CISO, privacy office</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Real due-date schedules, reporting windows and regulatory citations for each recurring form</td>
+<td>12.6, CAL-04, CAL-06</td>
+<td>Program offices, OGC</td>
+</tr>
+<tr>
+<td>20</td>
+<td>The applicability rules, and which organization roles may confirm or dismiss an item</td>
+<td>BR-22, CAL-07, 13.2</td>
+<td>Program offices</td>
+</tr>
+<tr>
+<td>21</td>
+<td>Should Quarter view follow calendar quarters or the federal fiscal year (October to September)?</td>
+<td>BR-26, CAL-02</td>
+<td>Business owner</td>
+</tr>
+<tr>
+<td>22</td>
+<td>Are the five readiness checks and the risk and conflict thresholds right?</td>
+<td>BR-23, BR-24</td>
+<td>Business owner</td>
+</tr>
+<tr>
+<td>23</td>
+<td>Should analysts see all offices on the staff calendar, or only their own by default?</td>
+<td>CAL-14, 13.2</td>
+<td>Program offices</td>
+</tr>
+<tr>
+<td>24</td>
+<td>How are reminders delivered (email, calendar feed), and is a .ics file download needed?</td>
+<td>CAL-13, CAL-15, INT-10</td>
+<td>Business owner, CIO</td>
+</tr>
+</tbody>
+</table></div></section><section class="sec" id="s19"><div class="eyebrow">Section 19</div><h2>Glossary</h2><div class="tw"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accession number</td>
+<td>Unique number given to every submission on receipt</td>
+</tr>
+<tr>
+<td>Agenda</td>
+<td>The calendar's date-ordered list of the next 180 days</td>
+</tr>
+<tr>
+<td>Applicability</td>
+<td>Whether a calendar item is Required, Potentially applicable, Docket-related or Optional for an organization</td>
+</tr>
+<tr>
+<td>API (B2B)</td>
+<td>System-to-system submission without the web screens</td>
+</tr>
+<tr>
+<td>CEII</td>
+<td>Critical Energy/Electric Infrastructure Information, a restricted security level</td>
+</tr>
+<tr>
+<td>Cover letter</td>
+<td>System-generated summary (filer, organization, type, date, accession, data file) stored in eLibrary for EQR, MBR and XBRL forms</td>
+</tr>
+<tr>
+<td>Data request</td>
+<td>A program office's request to the filer for more information</td>
+</tr>
+<tr>
+<td>Docket</td>
+<td>The proceeding a filing belongs to; identified by a docket number</td>
+</tr>
+<tr>
+<td>Docket subscription</td>
+<td>A person's choice to follow a docket so its deadlines appear on their calendar</td>
+</tr>
+<tr>
+<td>Internal milestone</td>
+<td>A preparation date an organization adds before a due date (draft, legal review, approval, planned submission)</td>
+</tr>
+<tr>
+<td>eLibrary</td>
+<td>The agency's document management system, outside the portal</td>
+</tr>
+<tr>
+<td>EQR</td>
+<td>Electric Quarterly Report</td>
+</tr>
+<tr>
+<td>eTariff</td>
+<td>Electronic tariff filing, sent as XML</td>
+</tr>
+<tr>
+<td>MBR</td>
+<td>Market-based rate submission, sent as XML</td>
+</tr>
+<tr>
+<td>OE</td>
+<td>Office of Enforcement (as used by the client; see open issue 1)</td>
+</tr>
+<tr>
+<td>OEMR</td>
+<td>Office of Energy Market Regulation</td>
+</tr>
+<tr>
+<td>OEP</td>
+<td>Office of Energy Projects</td>
+</tr>
+<tr>
+<td>OER</td>
+<td>Office of Electric Reliability (routed pipeline filings in this design; see open issue 1)</td>
+</tr>
+<tr>
+<td>OGC</td>
+<td>Office of the General Counsel</td>
+</tr>
+<tr>
+<td>OSEC</td>
+<td>Office of the Secretary</td>
+</tr>
+<tr>
+<td>Pay.gov</td>
+<td>The federal online payment service</td>
+</tr>
+<tr>
+<td>Quarter view</td>
+<td>Calendar view of three months side by side, using calendar quarters</td>
+</tr>
+<tr>
+<td>Readiness</td>
+<td>The five checks that show whether an organization is prepared to file an item</td>
+</tr>
+<tr>
+<td>Rehearing</td>
+<td>A request to reconsider a decision</td>
+</tr>
+<tr>
+<td>USWDS</td>
+<td>U.S. Web Design System</td>
+</tr>
+<tr>
+<td>XBRL</td>
+<td>eXtensible Business Reporting Language, used for Forms 1, 2, 6, 60 and 714</td>
+</tr>
+</tbody>
+</table></div></section></main></div>
+<footer class="foot"><div class="foot-inner"><div class="foot-brand"><svg class="mark" viewBox="0 0 64 56" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><polygon points="4,44 16,44 28,12 16,12" fill="url(#lg)"/><polygon points="20,44 32,44 44,12 32,12" fill="url(#lg)" opacity="0.75"/><polygon points="36,44 48,44 60,12 48,12" fill="url(#lg)" opacity="0.5"/></svg><span class="brand-text">AZA<strong>Federal</strong></span></div><div class="foot-meta"><div>Energy Flow system design and functional requirements, version 0.2 draft.</div><div>&copy; 2026 AZA Federal. All rights reserved.</div></div></div></footer>
+
+</body></html>
